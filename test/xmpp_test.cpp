@@ -114,6 +114,21 @@ static void process_sending_chat(PurpleAccount *account, char **message, int id,
   // user_state->send_handler(conv->name, *message);
 }
 
+char *message_id = NULL;
+static gboolean jabber_message_received(PurpleConnection *pc, const char *type,
+                                        const char *id, const char *from,
+                                        const char *to, void *message) {
+  UNUSED(pc);
+  UNUSED(type);
+  UNUSED(from);
+  UNUSED(to);
+  UNUSED(message);  // xmlnode type
+  if (message_id)
+    free(message_id);
+  message_id = strdup(id);
+  return FALSE;
+}
+
 static gboolean process_receiving_chat(PurpleAccount *account, char **sender,
                                        char **message, PurpleConversation *conv,
                                        int *flags, void *m) {
@@ -125,7 +140,7 @@ static gboolean process_receiving_chat(PurpleAccount *account, char **sender,
   prefix.append(*message);
   free(*message);
   *message = strdup(prefix.c_str());
-  // user_state->receive_handler(conv->name, prefix);
+  // user_state->receive_handler(conv->name, prefix, message_id);
   return FALSE;
 }
 
@@ -166,11 +181,14 @@ static void connect_to_signals(np1secUserState* user_state) {
   static int handle;
   void *conn_handle = purple_connections_get_handle();
   void *conv_handle = purple_conversations_get_handle();
+  void *jabber_handle = purple_plugins_find_with_id("prpl-jabber");
 
   purple_signal_connect(conn_handle, "signed-on", &handle,
                         PURPLE_CALLBACK(signed_on), user_state);
   purple_signal_connect(conv_handle, "sending-chat-msg", &handle,
                         PURPLE_CALLBACK(process_sending_chat), user_state);
+  purple_signal_connect(jabber_handle, "jabber-receiving-message", &handle,
+                        PURPLE_CALLBACK(jabber_message_received), user_state);
   purple_signal_connect(conv_handle, "receiving-chat-msg", &handle,
                         PURPLE_CALLBACK(process_receiving_chat), user_state);
   purple_signal_connect(conv_handle, "chat-join-failed", &handle,
