@@ -32,6 +32,8 @@ typedef gcry_sexp_t LongTermPublicKey;
 typedef gcry_sexp_t LongTermPrivateKey;
 typedef gcry_sexp_t np1secPublicKey;
 
+typedef HashBlock np1secKeyShare;
+
 class  LongTermIDKey {
  protected:
   KeyPair key_pair;
@@ -126,7 +128,7 @@ class Cryptic {
    *
    * @return gcry_sexp_t gcrypt s-expression respresentation
    */
-  gcry_sexp_t ConvertToSexp(std::string text);
+  static gcry_sexp_t ConvertToSexp(std::string text);
 
   /**
    * Given a valid std:string sign the string using the sessions
@@ -174,8 +176,8 @@ const unsigned char SESSION_IV[] = {
 
 const int c_np1sec_hash = gcry_md_algos::GCRY_MD_SHA256;
 
-gcry_error_t Hash(const void *buffer, size_t buffer_len, HashBlock hb,
-                  bool secure);
+gcry_error_t hash(const void *buffer, size_t buffer_len, HashBlock hb,
+                  bool secure = true);
 gcry_error_t compute_message_hash(HashBlock transcript_chain,
                                   std::string message);
 gcry_error_t compute_session_hash(HashBlock transcript_chain,
