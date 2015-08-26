@@ -45,6 +45,102 @@ typedef uint8_t IVBlock[c_iv_length];
 
 
 /**
+ * Contains the contents of a string of data that ought to be securely wiped
+ * before its memory is freed.  It should be used for cryptographic values
+ * as it provides a constant-time equality operator.
+ * Note that because it stores data in an array of uint8_t bytes, it is not
+ * suitable for non-ascii values.
+ */
+class SecureString
+{
+  public:
+  SecureString(const char* data, const size_t length);
+  SecureString(const uint8_t* data, const size_t length);
+  ~SecureString();
+
+  bool operator==(const SecureString& other);
+  bool operator!=(const SecureString& other);
+
+  size_t length() { return data_len; }
+  const uint8_t* unwrap() { return data; }
+
+  protected:
+  uint8_t* data;
+  size_t data_len;
+
+  void wipe_securely();
+};
+
+/**
+ * Used in cases where there is some unexpected data provided
+ * to the constructor of the SecureString class.
+ */
+class SecureStringException : public std::runtime_error
+{
+  public:
+  SecureStringException(const std::string& message)
+    : std:runtime_error(message) { };
+};
+
+/**
+ * Represents a block of data containing a 32-byte or 256-bit hashed value.
+ */
+class Hash256Bit : public SecureString
+{
+  public:
+  Hash256Bit(const char* data) : SecureString(data, 32) { };
+  Hash256Bit(const uint8_t* data) : SecureString(data, 32) { };
+};
+
+/**
+ * Represents a 256-bit symmetric key.
+ */
+typedef Hash256Bit SymmetricKey;
+
+/**
+ * Represents a block of data containing an initialization vector used
+ * for cryptographic operations.
+ */
+class InitVector : public SecureString
+{
+  public:
+  InitVector(const char* data) : SecureString(data, c_iv_length) { };
+  InitVector(const uint8_t* data) : SecureString(data, c_iv_length) { };
+};
+
+/**
+ * Wrap one of gcrypt's S-expression so that we can automatically release
+ * its resources.
+ */
+class AsymmetricKey
+{
+  public:
+  AsymmetricKey(gcry_sexp_t data);
+
+  gcry_sexp_t unwrap() { return *(data_ptr.get()); }
+
+  private:
+  std::shared_ptr<gcry_sexp_t> data_ptr;
+};
+
+/**
+ * Useful names for the public and private parts of keys.
+ */
+typedef AsymmetricKey PublicKey;
+typedef AsymmetricKey PrivateKey;
+
+/**
+ * A container for a pair containing both the public and private
+ * portions of an asymmetric key.
+ */
+typedef struct
+{
+  PublicKey* public_key;
+  PrivateKey* private_key;
+}
+KeyPair;
+
+/**
  * Encryption primitives and related definitions.
  */
 class Cryptic {

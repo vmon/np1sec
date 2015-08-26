@@ -43,6 +43,20 @@ extern "C" {
 
 namespace np1sec {
 
+#define wipememory2(_ptr,_set,_len) do { \
+              volatile char *_vptr=(volatile char *)(_ptr); \
+              size_t _vlen=(_len); \
+              unsigned char _vset=(_set); \
+              while(_vlen) { *_vptr=(_vset); _vptr++; _vlen--; } \
+                  } while(0)
+
+#define secure_wipe(_ptr,_len) do { \
+  wipememory2(_ptr,0xff,_len); \
+  wipememory2(_ptr,0xaa,_len); \
+  wipememory2(_ptr,0x55,_len); \
+  wipememory2(_ptr,0x00,_len); \
+} while (0)
+
 typedef uint32_t MessageId;
 typedef gcry_sexp_t np1secPrivateKey;
 typedef gcry_sexp_t np1secPublicKey;

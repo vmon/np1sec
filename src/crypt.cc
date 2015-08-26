@@ -32,6 +32,108 @@
 
 namespace np1sec {
 
+/**
+ * Create a SecureString from a C-style string.
+ * @param {char*} data - A pointer to the string to store. All bytes must be > 0
+ * @param {size_t} length - The number of bytes to extract from the string
+ */
+SecureString::SecureString(const char* data, size_t length)
+  : data_len(length)
+{
+  bool invalid = false;
+  this->data = new uint8_t[length];
+  for (unsigned int i = 0; i < length; i++) {
+    invalid = invalid || data[i] < 0;
+    this->data[i] = data[i];
+  }
+  if (invalid) {
+    this->wipe_securely();
+    throw SecureStringException("char* data contains a negative byte.");
+  }
+}
+
+/**
+ * Copy an array of uint8_t bytes into the secure string.
+ * @param {uint8_t*} data - A pointer to the bytes to store
+ * @param {size_t} length - The number of bytes to extract
+ */
+SecureString::SecureString(const uint8_t* data, size_t length)
+  : data_len(length)
+{
+  this->data = new uint8_t[length];
+  memcpy(this->data, data, length);
+}
+
+/**
+ * Have the garbage collector run code to write some arbitrary
+ * data over what had previously been stored before freeing.
+ */
+SecureString::~SecureString()
+{
+  this->wipe_securely();
+}
+
+/**
+ * Overwripte the data stored in our secure string a few times.
+ */
+void SecureString::wipe_securely()
+{
+  secure_wipe(data, data_len);
+}
+
+/**
+ * Constant time string equality check.
+ * @param {SecureString} other - Another secure string to compare against
+ */
+bool SecureString::operator==(const SecureString& other)
+{
+  unsigned char not_equal = (data_len == other.data_len) ? 0 : 1;
+  size_t compare_bytes;
+  if (data_len <= other.data_len) {
+    compare_bytes = data_len;
+  } else {
+    compare_bytes = other.data_len;
+  }
+  for (unsigned int i = 0; i < compare_bytes; i++) {
+    not_equal |= data[i] ^ other.data[i];
+  }
+  return not_equal == 0;
+}
+
+/**
+ * Constant time string inequality check.
+ * See the definition of operator== for more information.
+ * @param {SecureString} other - Another secure string to compare against
+ */
+bool SecureString::operator!=(const SecureString& other)
+{
+  return !(this->operator==(other));
+}
+
+/**
+ * Deallocate the s-expression stored in an AsymmetricKey.
+ * Not to be called directly.
+ * @param {gcry_sexp_t*} sexp - A pointer to the s-exp passed by the shared_ptr deconstructor
+ */
+static void _delete_sexp(gcry_sexp_t* sexp)
+{
+  gcry_sexp_release(*sexp);
+  delete sexp;
+}
+
+/**
+ * Constructor for the AsymmetricKey base class, wrapping a gcry_sexp_t.
+ * @param {gcry_sexp_t} data - The s-expression to wrap
+ */
+AsymmetricKey::AsymmetricKey(gcry_sexp_t data)
+{
+  // Create a shared pointer to the new s-exp to store and call
+  // _delete_sexp to deallocate it.
+  gcry_sexp_t* wrapper = new gcry_sexp_t;
+  *wrapper = data;
+  data_ptr = std::shared_ptr<gcry_sexp_t>(wrapper, _delete_sexp);
+}
+
 gcry_error_t Cryptic::hash(const void *buffer, size_t buffer_len, HashBlock hb,
                   bool secure) {
   gcry_error_t err = 0;
