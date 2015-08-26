@@ -146,16 +146,16 @@ AsymmetricKeyPair;
  */
 class Cryptic {
  protected:
-  gcry_sexp_t ephemeral_key = nullptr;
-  gcry_sexp_t ephemeral_pub_key = nullptr;
-  gcry_sexp_t ephemeral_prv_key = nullptr;
+  AsymmetricKey* ephemeral_key = nullptr;
+  PublicKey* ephemeral_pub_key = nullptr;
+  PrivateKey* ephemeral_prv_key = nullptr;
   np1secSymmetricKey session_key;
 
   //HashBlock session_iv; //TODO:: it might be good to have a iv for the whole
   //session
 
   static const uint32_t ED25519_KEY_SIZE = 32;
-  static const gcry_mpi_format NP1SEC_BLOB_OUT_FORMAT = GCRYMPI_FMT_USG;
+  static conPrivateKey st gcry_mpi_format NP1SEC_BLOB_OUT_FORMAT = GCRYMPI_FMT_USG;
 
  public:
 
@@ -172,9 +172,18 @@ class Cryptic {
    * Copy constructor
    */
   Cryptic(const Cryptic& rhs) {
-    ephemeral_key = copy_crypto_resource(rhs.ephemeral_key);
-    ephemeral_pub_key = copy_crypto_resource(rhs.ephemeral_pub_key);
-    ephemeral_prv_key = copy_crypto_resource(rhs.ephemeral_prv_key);
+    if (ephemeral_key != nullptr) {
+      delete ephemeral_key;
+    }
+    ephemeral_key = new AsymmetricKey(copy_crypto_resource(rhs.ephemeral_key));
+    if (ephemeral_pub_key != nullptr) {
+      delete ephemeral_pub_key;
+    }
+    ephemeral_pub_key = new PublicKey(copy_crypto_resource(rhs.ephemeral_pub_key));
+    if (ephemeral_prv_key != nullptr) {
+      delete ephemeral_prv_key;
+    }
+    ephemeral_prv_key = new PrivateKey(copy_crypto_resource(rhs.ephemeral_prv_key));
     set_session_key(rhs.session_key);
   }
 
@@ -185,7 +194,7 @@ class Cryptic {
    *  not crypto task per se)
    *
    */
-  gcry_sexp_t get_ephemeral_pub_key() const
+  PublicKey* get_ephemeral_pub_key() const
   {
     return ephemeral_pub_key;
   }

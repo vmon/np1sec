@@ -163,7 +163,7 @@ Cryptic::Cryptic() {
 
 }
 
-bool Cryptic::generate_key_pair(np1secAsymmetricKey* generated_key) {
+bool Cryptic::generate_key_pair(AsymmetricKey* generated_key) {
   /* Generate a new Ed25519 key pair. */
   gcry_error_t err = 0;
   gcry_sexp_t ed25519_params = nullptr;
@@ -198,24 +198,25 @@ bool Cryptic::init() {
   if (err)
     goto err;
 
-  err = gcry_pk_genkey(&ephemeral_key, ed25519_params);
+  const uint8_t* eph_key_raw = ephemeral_key->unwrap();
+  err = gcry_pk_genkey(&eph_key_raw, ed25519_params);
   gcry_sexp_release(ed25519_params);
   if (err) {
     goto err;
   }
 
-  ephemeral_pub_key = gcry_sexp_find_token(ephemeral_key, "public-key", 0);
-  if (!ephemeral_pub_key) {
-    gcry_sexp_release(ephemeral_key);
+  ephemeral_pub_key = new PublicKey(gcry_sexp_find_token(eph_key_raw, "public-key", 0));
+  if (!ephemeral_pub_key || !ephemeral_pub_key->unwrap()) {
+    delete ephemeral_key;
     logger.error("failed to retrieve public key",__FUNCTION__);
     throw np1secCryptoException();
     return false;
   }
 
-  ephemeral_prv_key = gcry_sexp_find_token(ephemeral_key, "private-key", 0);
-  if (!ephemeral_prv_key) {
-    gcry_sexp_release(ephemeral_key);
-    gcry_sexp_release(ephemeral_pub_key);
+  ephemeral_prv_key = new PrivateKey(gcry_sexp_find_token(eph_key_raw, "private-key", 0));
+  if (!ephemeral_prv_key || !ephemeral_prv_key->unwrap()) {
+    delete ephemeral_key;
+    delete ephemeral_pub_key;
     logger.error("failed to retrieve private key", __FUNCTION__);
     throw np1secCryptoException();
     return false;
@@ -380,7 +381,7 @@ void Cryptic::triple_ed_dh(np1secPublicKey peer_ephemeral_key, np1secPublicKey p
   std::string token_concat;
 
   gcry_sexp_t my_long_term_secret_scaler = gcry_sexp_nth(gcry_sexp_find_token(my_long_term_key, "a", 0),1);
-  gcry_sexp_t my_ephemeral_secret_scaler = gcry_sexp_nth(gcry_sexp_find_token(ephemeral_key, "a", 0),1);
+  gcry_sexp_t my_ephemeral_secret_scaler = gcry_sexp_nth(gcry_sexp_find_token(ephemeral_key.unwrap(), "a", 0),1);
 
   if (!(my_long_term_secret_scaler && my_ephemeral_secret_scaler)) {
     logger.error("teddh: failed to retreive long or ephemeral secret scaler, possibly using a wrong version of gcryp", __FUNCTION__);
@@ -488,7 +489,7 @@ void Cryptic::sign(unsigned char **sigp, size_t *siglenp,
   }
 
   
-  err = gcry_pk_sign(&sigs, plain_sexp, ephemeral_prv_key);
+  err = gcry_pk_sign(&sigs, plain_sexp, ephemeral_prv_key.unwrap());
 
   if ( err ) {
     gcry_sexp_release(plain_sexp);
@@ -694,10 +695,9 @@ std::string Cryptic::Decrypt(std::string encrypted_text) {
 
 Cryptic::~Cryptic()
 {
-    gcry_sexp_release(ephemeral_key);
-    gcry_sexp_release(ephemeral_pub_key);
-    gcry_sexp_release(ephemeral_prv_key);
-    
+  delete ephemeral_key;
+  delete ephemeral_pub_key;
+  delete ephemeral_prv_key;
 }
 
 } // namespace np1sec
