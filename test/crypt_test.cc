@@ -35,7 +35,24 @@ const unsigned char SESSION_IV[] = {
   0x0c, 0x0d, 0x0e, 0x0f
 };
 
+
+/**
+ * Extend the SecureString class to expose the wipe_securely method.
+ */
+class SecureStringT : public SecureString
+{
+  public:
+  SecureStringT(const char* dat, size_t len) : SecureString(dat, len) { };
+  SecureStringT(const uint8_t* dat, size_t len) : SecureString(dat, len) { };
+
+  void wipe_securely() {
+    SecureString::wipe_securely();
+  }
+};
+
+
 class CryptTest : public ::testing::Test { };
+class SecureStringTest : public ::testing::Test { };
 
 TEST_F(CryptTest, test_hash) {
   std::string str = "abc";
@@ -111,3 +128,72 @@ TEST_F(CryptTest, test_teddh_test) {
 
 }
 
+/**
+ * Test that creating a secure string from an array of characters
+ * with values all >= 0 will succeed.
+ */
+TEST_F(SecureStringTest, test_char_ptr_constructor_pass)
+{
+  char* str = new char[4];
+  str[0] = 100; str[1] = 105;
+  str[2] = 0; str[3] = 106;
+  SecureStringT sstr(str, static_cast<size_t>(4));
+  ASSERT_TRUE(sstr.length() == 4);
+  delete str;
+  const uint8_t* data = sstr.unwrap();
+  ASSERT_TRUE(data[0] == 100);
+  ASSERT_TRUE(data[1] == 105);
+  ASSERT_TRUE(data[2] == 0);
+  ASSERT_TRUE(data[3] == 106);
+}
+
+/**
+ * Test that creating a secure string from an array of characters
+ * containing a byte < 0 will lead to an exception.
+ */
+TEST_F(SecureStringTest, test_char_ptr_constructor_fail)
+{
+  char* str = new char[4];
+  str[0] = 134; str[1] = 0;
+  str[2] = -10; str[3] = 10;
+  bool exception_encountered = false;
+  try {
+    SecureStringT sstr(str, static_cast<size_t>(4));
+  } catch (SecureStringException& e) {
+    exception_encountered = true;
+  }
+  delete str;
+  ASSERT_TRUE(exception_encountered);
+}
+
+/**
+ * Test that data is properly copied from the source array.
+ */
+TEST_F(SecureStringTest, test_uint8_t_ptr_constructor)
+{
+  uint8_t* bytes = new uint8_t[4];
+  bytes[0] = 98; bytes[1] = 123;
+  bytes[2] = 0; bytes[3] = 255;
+  SecureStringT sstr(bytes, static_cast<size_t>(4));
+  ASSERT_TRUE(sstr.length() == 4);
+  delete[] bytes;
+  const uint8_t* data = sstr.unwrap();
+  ASSERT_TRUE(data[0] == 98);
+  ASSERT_TRUE(data[1] == 123);
+  ASSERT_TRUE(data[2] == 0);
+  ASSERT_TRUE(data[3] == 255);
+}
+
+/**
+ * Test that a call to wipe_securely does indeed clear the data.
+ */
+TEST_F(SecureStringTest, test_data_zeroing)
+{
+  uint8_t bytes[4] = {100, 0, 123, 255};
+  SecureStringT sstr(bytes, static_cast<size_t>(4));
+  sstr.wipe_securely();
+  const uint8_t* data = sstr.unwrap();
+  for (unsigned int i = 0; i < 4; i++) {
+    ASSERT_TRUE(data[i] == 0);
+  }
+}

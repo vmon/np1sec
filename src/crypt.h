@@ -21,6 +21,7 @@
 
 #include <string>
 #include <cstring>
+#include <memory>
 
 #include "src/common.h"
 #include "src/exceptions.h"
@@ -79,7 +80,7 @@ class SecureStringException : public std::runtime_error
 {
   public:
   SecureStringException(const std::string& message)
-    : std:runtime_error(message) { };
+    : std::runtime_error(message) { };
 };
 
 /**
@@ -138,7 +139,7 @@ typedef struct
   PublicKey* public_key;
   PrivateKey* private_key;
 }
-KeyPair;
+AsymmetricKeyPair;
 
 /**
  * Encryption primitives and related definitions.
