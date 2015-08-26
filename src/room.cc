@@ -49,7 +49,7 @@ void np1secRoom::solitary_join() {
   //UnauthenticatedParticipantList session_view;
   ParticipantMap participants;
   
-  participants.insert( std::pair<std::string,Participant> (user_state->myself->nickname, Participant(UnauthenticatedParticipant(*(user_state->myself), Cryptic::public_key_to_stringbuff(np1sec_ephemeral_crypto.get_ephemeral_pub_key()),true))));
+  participants.insert( std::pair<std::string,Participant> (user_state->myself->nickname, Participant(UnauthenticatedParticipant(*(user_state->myself), public_key_to_stringbuff(np1sec_ephemeral_crypto.get_ephemeral_pub_key()),true))));
 
   SessionId empty_session_id;
   // np1secMessage solitary_joiner_info(empty_session_id,
@@ -92,7 +92,7 @@ void np1secRoom::join() {
 
     //more humane way of doing this
     //turening sexp to stirng buffer.
-    UnauthenticatedParticipant me(*(user_state->myself), Cryptic::public_key_to_stringbuff(np1sec_ephemeral_crypto.get_ephemeral_pub_key()),true);
+    UnauthenticatedParticipant me(*(user_state->myself), public_key_to_stringbuff(np1sec_ephemeral_crypto.get_ephemeral_pub_key()),true);
     np1secMessage join_message;
 
     join_message.create_join_request_msg(me);
@@ -234,7 +234,7 @@ void np1secRoom::receive_handler(np1secMessage received_message)
     //if we are current user we must have active_session
     logger.assert_or_die(active_session.get() && session_universe.find(active_session.get_as_stringbuff()) != session_universe.end(), "CURRENT_USER without active session! something doesn't make sense");
     if (received_message.has_sid()) {
-      if (session_universe.find(Cryptic::hash_to_string_buff(received_message.session_id.get())) != session_universe.end()) {
+      if (session_universe.find(hash_to_string_buff(received_message.session_id.get())) != session_universe.end()) {
         try {
           action_to_take = session_universe[received_message.session_id.get_as_stringbuff()]->state_handler(received_message);
         } catch(std::exception& e) {

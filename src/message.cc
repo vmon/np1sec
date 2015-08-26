@@ -400,7 +400,7 @@ std::string np1secMessage::create_in_session_msg(SessionId session_id,
   base_message += data_to_string(sender_own_id);
   base_message += data_to_string(parent_id);
   base_message += transcript_chain_hash;
-  base_message += Cryptic::hash_to_string_buff(buffer);
+  base_message += hash_to_string_buff(buffer);
 
   switch(message_sub_type)
     {
@@ -582,8 +582,8 @@ HashStdBlock np1secMessage::compute_hash()
 {
   if (final_whole_message.length()) {
     HashBlock hb;
-    Cryptic::hash(final_whole_message, hb, true);
-    return Cryptic::hash_to_string_buff(hb);
+    hash(final_whole_message, hb, true);
+    return hash_to_string_buff(hb);
   }
   else
     throw np1secInvalidDataException();
