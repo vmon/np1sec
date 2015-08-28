@@ -234,7 +234,8 @@ gcry_sexp_t get_public_key(np1secAsymmetricKey key_pair)
   return gcry_sexp_find_token(key_pair, "public-key", 0);
 }
 
-std::string public_key_to_stringbuff(np1secAsymmetricKey public_key) {
+std::string public_key_to_stringbuff(PublicKey* asym_public_key) {
+  gcry_sexp_t public_key = asym_public_key->unwrap(); 
   gcry_sexp_t q_of_pub_key = gcry_sexp_find_token(public_key, "q", 0);
   if (!q_of_pub_key)
     throw np1secCryptoException();

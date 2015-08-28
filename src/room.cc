@@ -49,7 +49,14 @@ void np1secRoom::solitary_join() {
   //UnauthenticatedParticipantList session_view;
   ParticipantMap participants;
   
-  participants.insert( std::pair<std::string,Participant> (user_state->myself->nickname, Participant(UnauthenticatedParticipant(*(user_state->myself), public_key_to_stringbuff(np1sec_ephemeral_crypto.get_ephemeral_pub_key()),true))));
+  participants.insert(
+    std::pair<std::string,Participant>(
+      user_state->myself->nickname,
+      Participant(
+        UnauthenticatedParticipant(
+          *(user_state->myself),
+          public_key_to_stringbuff(np1sec_ephemeral_crypto.get_ephemeral_pub_key()),
+          true))));
 
   SessionId empty_session_id;
   // np1secMessage solitary_joiner_info(empty_session_id,
@@ -92,7 +99,10 @@ void np1secRoom::join() {
 
     //more humane way of doing this
     //turening sexp to stirng buffer.
-    UnauthenticatedParticipant me(*(user_state->myself), public_key_to_stringbuff(np1sec_ephemeral_crypto.get_ephemeral_pub_key()),true);
+    UnauthenticatedParticipant me(
+      *(user_state->myself),
+      public_key_to_stringbuff(np1sec_ephemeral_crypto.get_ephemeral_pub_key()),
+      true);
     np1secMessage join_message;
 
     join_message.create_join_request_msg(me);

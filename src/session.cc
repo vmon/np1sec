@@ -886,8 +886,10 @@ np1secSession::StateAndAction np1secSession::send_session_confirmation_if_everyb
     //now send the confirmation messagbe
     np1secMessage outboundmessage(&cryptic);
 
-    outboundmessage.create_session_confirmation_msg(session_id,
-                                                    hash_to_string_buff(session_confirmation), public_key_to_stringbuff(future_cryptic.get_ephemeral_pub_key()));
+    outboundmessage.create_session_confirmation_msg(
+      session_id,
+      hash_to_string_buff(session_confirmation),
+      public_key_to_stringbuff(future_cryptic.get_ephemeral_pub_key()));
       
     outboundmessage.send(room_name, us);
 
