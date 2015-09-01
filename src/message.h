@@ -343,7 +343,7 @@ class np1secMessage {
    * Verify the message
    *
    */
-  bool verify_message(np1secPublicKey sender_ephemeral_key);
+  bool verify_message(PublicKey* sender_ephemeral_key);
 
   /**
    * Create and return an encrypted form of the signed message

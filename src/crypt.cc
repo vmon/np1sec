@@ -157,6 +157,16 @@ done:
   return err;
 }
 
+gcry_error_t hash(const void *buffer, size_t buffer_len, HashBlock hb)
+{
+  return hash(buffer, buffer_len, hb, true);
+}
+
+gcry_error_t hash(const std::string string_buffer, HashBlock hb)
+{
+  return hash(string_buffer, hb, true);
+}
+
 Cryptic::Cryptic() {
   assert(!gcry_md_test_algo(c_np1sec_hash));
 
@@ -333,7 +343,7 @@ void release_crypto_resource(gcry_sexp_t crypto_resource)
     gcry_sexp_release(crypto_resource);
 }
 
-gcry_error_t hash(const std::string string_buffer, HashBlock hb, bool secure = true) {
+gcry_error_t hash(const std::string string_buffer, HashBlock hb, bool secure) {
   return hash(string_buffer.c_str(), string_buffer.size(), hb, secure);
 }
 
@@ -342,7 +352,7 @@ std::string hash_to_string_buff(const HashBlock hash_block)
   return std::string(reinterpret_cast<const char*>(hash_block), sizeof(HashBlock));
 }
 
-HashStdBlock hash(const std::string string_buffer, bool secure = true) {
+HashStdBlock hash(const std::string string_buffer, bool secure) {
   HashBlock hb;
   gcry_error_t err =  hash(string_buffer.c_str(), string_buffer.size(), hb, secure);
   if (err) {
@@ -595,7 +605,7 @@ void Cryptic::sign(unsigned char **sigp, size_t *siglenp,
 
 bool Cryptic::verify(std::string plain_text,
                              const unsigned char *sigbuf,
-                             np1secPublicKey signer_ephemeral_pub_key) {
+                             PublicKey* signer_ephemeral_pub_key) {
   gcry_error_t err;
   gcry_sexp_t datas = nullptr, sigs = nullptr;
   static const uint32_t nr = 32, ns = 32;
@@ -622,7 +632,7 @@ bool Cryptic::verify(std::string plain_text,
     goto err;
   }
 
-  err = gcry_pk_verify(sigs, datas, signer_ephemeral_pub_key);
+  err = gcry_pk_verify(sigs, datas, signer_ephemeral_pub_key->unwrap());
 
   gcry_sexp_release(sigs);
   gcry_sexp_release(datas);

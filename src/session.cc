@@ -744,9 +744,11 @@ RoomAction np1secSession::init_a_session_with_plist(np1secMessage received_messa
     throw np1secInvalidParticipantException();
   }    
 
-  np1secPublicKey temp_future_pub_key = reconstruct_public_key_sexp(hash_to_string_buff(participants[received_message.sender_nick].future_raw_ephemeral_key));
+  np1secPublicKey temp_future_pub_key = reconstruct_public_key_sexp(
+      hash_to_string_buff(participants[received_message.sender_nick].future_raw_ephemeral_key));
+  PublicKey wrapper(temp_future_pub_key);
                                                                              
-  if (!received_message.verify_message(temp_future_pub_key))
+  if (!received_message.verify_message(&wrapper))
     {
       release_crypto_resource(temp_future_pub_key);
       logger.warn("failed to verify signature of PARTICIPANT_INFO message.");
@@ -1280,7 +1282,8 @@ np1secSession::StateAndAction np1secSession::receive(np1secMessage encrypted_mes
   //check signature if not valid, just ignore the message
   //first we need to get the correct ephemeral key
   if (received_message.sender_index < peers.size()) {
-    if (received_message.verify_message(participants[peers[received_message.sender_index]].ephemeral_key)) {
+    PublicKey wrapper(participants[peers[received_message.sender_index]].ephemeral_key);
+    if (received_message.verify_message(&wrapper)) {
       //only messages with valid signature are concidered received
       //for any matters including consistency chcek
       last_received_message_id++;

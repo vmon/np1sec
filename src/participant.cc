@@ -38,9 +38,11 @@ std::string participants_to_string(const ParticipantMap& plist)
  * To be used in std::sort to sort the particpant list
  * in a way that is consistent way between all participants
  */
-bool sort_by_long_term_pub_key(const np1secAsymmetricKey lhs, const np1secAsymmetricKey rhs)
+bool sort_by_long_term_pub_key(const PublicKey* lhs, const PublicKey* rhs)
 {
-  return public_key_to_stringbuff(lhs) < public_key_to_stringbuff(rhs);
+  PublicKey* new_lhs = const_cast<PublicKey*>(lhs);
+  PublicKey* new_rhs = const_cast<PublicKey*>(rhs);
+  return public_key_to_stringbuff(new_lhs) < public_key_to_stringbuff(new_rhs);
 
 }
 

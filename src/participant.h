@@ -122,13 +122,13 @@ struct ParticipantId
  */
 struct UnauthenticatedParticipant {
   ParticipantId participant_id;
-  uint8_t ephemeral_pub_key[c_ephemeral_key_length];  // This should be in some convienient 
-  // Format
+  // This should be in some convenient format
+  uint8_t ephemeral_pub_key[c_ephemeral_key_length];
   bool authenticated;
 
-  /**
-  * constructor 
-  */
+/**
+ * constructor 
+ */
 UnauthenticatedParticipant(ParticipantId participant_id, std::string ephemeral_pub_key, bool authenticated = false)
 :participant_id (participant_id),
     authenticated(authenticated)
@@ -247,7 +247,8 @@ class Participant {
     index(rhs.index)
     
   {
-    long_term_pub_key = copy_crypto_resource(rhs.long_term_pub_key);
+    PublicKey pubkey(rhs.long_term_pub_key);
+    long_term_pub_key = copy_crypto_resource(&pubkey);
     set_ephemeral_key(rhs.raw_ephemeral_key);
     memcpy(future_raw_ephemeral_key, rhs.future_raw_ephemeral_key, sizeof(HashBlock));
     memcpy(p2p_key, rhs.p2p_key, sizeof(HashBlock));

@@ -167,9 +167,11 @@ void release_crypto_resource(gcry_sexp_t crypto_resource);
 
 gcry_sexp_t copy_crypto_resource(AsymmetricKey* crypto_resource);
 
-gcry_error_t hash(const void *buffer, size_t buffer_len, HashBlock hb, bool secure = true);
+gcry_error_t hash(const void *buffer, size_t buffer_len, HashBlock hb, bool secure);
+gcry_error_t hash(const void *buffer, size_t buffer_len, HashBlock hb);
 
-gcry_error_t hash(const std::string string_buffer, HashBlock hb, bool secure = true);
+gcry_error_t hash(const std::string string_buffer, HashBlock hb, bool secure);
+gcry_error_t hash(const std::string string_buffer, HashBlock hb);
 
 std::string hash_to_string_buff(const HashBlock hash_block);
 
@@ -327,7 +329,7 @@ teddh   *
    * @return true if the signature is valid false on false signature
    * throw exception in case of error
    */
-  bool verify(std::string signed_text, const unsigned char *sigbuf, np1secPublicKey signer_ephmeral_pub_key);
+  bool verify(std::string signed_text, const unsigned char *sigbuf, PublicKey* signer_ephmeral_pub_key);
 
   /**
    * Create instance of cipher session based on configured algorithm, mode,

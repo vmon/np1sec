@@ -477,7 +477,9 @@ class np1secSession {
     }
 
     //we need to check the signature of the message here
-    if (!received_message.verify_message(participants[received_message.sender_nick].ephemeral_key))
+    // TODO - Go back to the participant class and replace keys with instances of new classes
+    PublicKey wrapper(participants[received_message.sender_nick].ephemeral_key);
+    if (!received_message.verify_message(&wrapper))
       throw np1secAuthenticationException();
 
   }
