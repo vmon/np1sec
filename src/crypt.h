@@ -25,7 +25,6 @@
 
 #include "src/common.h"
 #include "src/exceptions.h"
-#include "src/crypt.h"
 
 extern "C" {
   #include "gcrypt.h"
@@ -129,17 +128,21 @@ class AsymmetricKey
  */
 typedef AsymmetricKey PublicKey;
 typedef AsymmetricKey PrivateKey;
+typedef AsymmetricKey Scalar;
 
 /**
  * A container for a pair containing both the public and private
  * portions of an asymmetric key.
  */
-typedef struct
+class AsymmetricKeyPair
 {
+  public:
   PublicKey* public_key;
   PrivateKey* private_key;
-}
-AsymmetricKeyPair;
+  Scalar* scalar; 
+
+  AsymmetricKeyPair(gcry_sexp_t sexp);
+};
 
 std::string public_key_to_stringbuff(PublicKey* public_key);
 
@@ -302,7 +305,7 @@ teddh   *
    *
    * throw an exception  if the operation fails, true on success
    */
-  void triple_ed_dh(np1secPublicKey peer_ephemeral_key, np1secPublicKey peer_long_term_key, np1secAsymmetricKey my_long_term_key, bool peer_is_first, HashBlock* teddh_token);
+  void triple_ed_dh(PublicKey* peer_ephemeral_key, PublicKey* peer_long_term_key, AsymmetricKeyPair* my_long_term_key, bool peer_is_first, HashBlock* teddh_token);
 
   /**
    * Given a valid std:string sign the string using the sessions

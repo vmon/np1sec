@@ -100,17 +100,16 @@ TEST_F(CryptTest, test_sign_verify) {
 
 TEST_F(CryptTest, test_teddh_test) {
 
-  np1secAsymmetricKey alice_long_term_key = NULL;
-  np1secAsymmetricKey bob_long_term_key = NULL;
-
-  ASSERT_TRUE(generate_key_pair(&alice_long_term_key));
-  ASSERT_TRUE(generate_key_pair(&bob_long_term_key));
-
-  //Extract just the public key to hand over to the peer
-  np1secPublicKey alice_long_term_pub_key = gcry_sexp_find_token(alice_long_term_key, "public-key", 0);
-  np1secPublicKey bob_long_term_pub_key = gcry_sexp_find_token(bob_long_term_key, "public-key", 0);
-
-  ASSERT_TRUE(alice_long_term_pub_key && bob_long_term_pub_key);
+  AsymmetricKeyPair* alice_keys = generate_key_pair();
+  AsymmetricKeyPair* bob_keys = generate_key_pair();
+  
+  ASSERT_TRUE(alice_keys != nullptr);
+  ASSERT_TRUE(bob_keys != nullptr);
+  ASSERT_TRUE(alice_keys->public_key != nullptr);
+  ASSERT_TRUE(alice_keys->private_key != nullptr);
+  ASSERT_TRUE(bob_keys->public_key != nullptr);
+  ASSERT_TRUE(bob_keys->private_key != nullptr);
+ 
   Cryptic alice_crypt, bob_crypt;
   alice_crypt.init(); //This is either stupid or have stupid name
   bob_crypt.init();
@@ -120,13 +119,28 @@ TEST_F(CryptTest, test_teddh_test) {
   bool bob_is_first = !alice_is_first;
   HashBlock teddh_alice_bob, teddh_bob_alice;
 //Alice is making the tdh token, peer is bob
-  ASSERT_NO_THROW(alice_crypt.triple_ed_dh(bob_crypt.get_ephemeral_pub_key(), bob_long_term_pub_key, alice_long_term_key, bob_is_first, &teddh_alice_bob));
+  ASSERT_NO_THROW(
+    alice_crypt.triple_ed_dh(
+      bob_crypt.get_ephemeral_pub_key(),
+      bob_keys->public_key,
+      alice_keys,
+      bob_is_first,
+      &teddh_alice_bob));
   //Bob is making the tdh token, peer is alice
-  ASSERT_NO_THROW(bob_crypt.triple_ed_dh(alice_crypt.get_ephemeral_pub_key(), alice_long_term_pub_key, bob_long_term_key, alice_is_first, &teddh_bob_alice));
+  ASSERT_NO_THROW(
+    bob_crypt.triple_ed_dh(
+      alice_crypt.get_ephemeral_pub_key(),
+      alice_keys->public_key,
+      bob_keys,
+      alice_is_first,
+      &teddh_bob_alice));
 
-  for(unsigned int i = 0; i < sizeof(HashBlock); i++)
+  for(unsigned int i = 0; i < sizeof(HashBlock); i++) {
     ASSERT_EQ(teddh_alice_bob[i], teddh_bob_alice[i]);
+  }
 
+  delete alice_keys;
+  delete bob_keys;
 }
 
 /**

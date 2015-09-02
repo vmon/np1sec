@@ -56,8 +56,9 @@ bool sort_by_long_term_pub_key(const PublicKey* lhs, const PublicKey* rhs)
 bool operator<(const Participant& lhs, const Participant& rhs)
 {
   if (lhs.id.nickname < rhs.id.nickname) return true;
-
-  return sort_by_long_term_pub_key(lhs.long_term_pub_key, rhs.long_term_pub_key);
+  PublicKey lhs_wrapped(lhs.long_term_pub_key);
+  PublicKey rhs_wrapped(rhs.long_term_pub_key);
+  return sort_by_long_term_pub_key(&lhs_wrapped, &rhs_wrapped);
   
 }
  
@@ -123,7 +124,18 @@ void Participant::authenticate_to(HashBlock auth_token, const np1secAsymmetricKe
  */
 void Participant::compute_p2p_private(np1secAsymmetricKey thread_user_id_key, Cryptic* thread_user_crypto)
 {
-  thread_user_crypto->triple_ed_dh(ephemeral_key, long_term_pub_key, thread_user_id_key, sort_by_long_term_pub_key(this->long_term_pub_key, thread_user_id_key), &p2p_key);
+  // TODO - Make Participants use the new classes
+  PublicKey ek_wrapped(ephemeral_key);
+  PublicKey lt_wrapped(long_term_pub_key);
+  AsymmetricKeyPair pair(thread_user_id_key);
+  thread_user_crypto->triple_ed_dh(
+    &ek_wrapped,
+    &lt_wrapped,
+    &pair,
+    sort_by_long_term_pub_key(
+      &lt_wrapped,
+      pair.public_key),
+    &p2p_key);
                       
 }
 

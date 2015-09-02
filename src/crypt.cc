@@ -134,6 +134,18 @@ AsymmetricKey::AsymmetricKey(gcry_sexp_t data)
   data_ptr = std::shared_ptr<gcry_sexp_t>(wrapper, _delete_sexp);
 }
 
+/**
+ * Constructor for the AsymmetricKeyPair class, which simply contains
+ * data associated with key pairs, the components of which are public.
+ * @param {gcry_sexp_t} sexp - The s-expression containing all the key data
+ */
+AsymmetricKeyPair::AsymmetricKeyPair(gcry_sexp_t sexp)
+{
+  public_key = new PublicKey(gcry_sexp_find_token(sexp, "public-key", 0));
+  private_key = new PrivateKey(gcry_sexp_find_token(sexp, "private-key", 0));
+  scalar = new Scalar(gcry_sexp_nth(gcry_sexp_find_token(sexp, "a", 0), 1));
+}
+
 gcry_error_t hash(const void *buffer, size_t buffer_len, HashBlock hb, bool secure) {
   gcry_error_t err = 0;
   gcry_md_hd_t digest = nullptr;
@@ -177,7 +189,6 @@ AsymmetricKeyPair* generate_key_pair() {
   /* Generate a new Ed25519 key pair. */
   gcry_error_t err = 0;
   gcry_sexp_t ed25519_params = nullptr;
-  AsymmetricKeyPair* pair = new AsymmetricKeyPair;
  
   err = gcry_sexp_build(&ed25519_params, NULL,
                         "(genkey (ecc (curve Ed25519) (flags eddsa)))");
@@ -193,12 +204,14 @@ AsymmetricKeyPair* generate_key_pair() {
     throw np1secCryptoException();
     return nullptr;
   }
-  pair->public_key = new PublicKey(gcry_sexp_find_token(*generated, "public-key", 0));
-  pair->private_key = new PrivateKey(gcry_sexp_find_token(*generated, "private-key", 0));
+  
+  AsymmetricKeyPair* pair = new AsymmetricKeyPair(*generated);
   if ( !pair->public_key
     || !pair->private_key
+    || !pair->scalar
     || !pair->public_key->unwrap()
-    || !pair->private_key->unwrap()) {
+    || !pair->private_key->unwrap()
+    || !pair->scalar->unwrap()) {
     logger.error(std::string("Key failure: ") + gcry_strsource(err)+ "/" + gcry_strerror(err), __FUNCTION__);
     throw np1secCryptoException();
     return nullptr;
@@ -217,14 +230,14 @@ bool Cryptic::init() {
     logger.error(std::string("Key failure: ") + gcry_strsource(err)+"/" + gcry_strerror(err), __FUNCTION__);
     throw np1secCryptoException();
   }
-  gcry_sexp_t eph_key_raw = ephemeral_key->unwrap();
+  gcry_sexp_t eph_key_raw;
   err = gcry_pk_genkey(&eph_key_raw, ed25519_params);
   gcry_sexp_release(ed25519_params);
   if (err) {
     logger.error(std::string("Key failure: ") + gcry_strsource(err)+"/" + gcry_strerror(err), __FUNCTION__);
     throw np1secCryptoException();
   }
-
+  ephemeral_key = new AsymmetricKey(eph_key_raw);
   ephemeral_pub_key = new PublicKey(gcry_sexp_find_token(eph_key_raw, "public-key", 0));
   if (!ephemeral_pub_key || !ephemeral_pub_key->unwrap()) {
     delete ephemeral_key;
@@ -413,7 +426,7 @@ gcry_sexp_t copy_crypto_resource(AsymmetricKey* crypto_resource_wrapped)
  *
  * @return true if succeeds otherwise false
  */
-void Cryptic::triple_ed_dh(np1secPublicKey peer_ephemeral_key, np1secPublicKey peer_long_term_key, np1secAsymmetricKey my_long_term_key, bool peer_is_first, HashBlock* teddh_token)
+void Cryptic::triple_ed_dh(PublicKey* peer_ephemeral_key, PublicKey* peer_long_term_key, AsymmetricKeyPair* my_long_term_key, bool peer_is_first, HashBlock* teddh_token)
 {
   gcry_error_t err = 0;
   bool failed = true;
@@ -431,14 +444,12 @@ void Cryptic::triple_ed_dh(np1secPublicKey peer_ephemeral_key, np1secPublicKey p
   uint8_t* feed_to_hash_buffer = NULL;
   std::string token_concat;
 
-  gcry_sexp_t my_long_term_secret_scaler = gcry_sexp_nth(
-    gcry_sexp_find_token(my_long_term_key, "a", 0),
-    1);
-  gcry_sexp_t my_ephemeral_secret_scaler = gcry_sexp_nth(
+  gcry_sexp_t my_long_term_secret_scalar = my_long_term_key->scalar->unwrap();
+  gcry_sexp_t my_ephemeral_secret_scalar = gcry_sexp_nth(
     gcry_sexp_find_token(ephemeral_key->unwrap(), "a", 0),
     1);
 
-  if (!(my_long_term_secret_scaler && my_ephemeral_secret_scaler)) {
+  if (!(my_long_term_secret_scalar && my_ephemeral_secret_scalar)) {
     logger.error("teddh: failed to retreive long or ephemeral secret scaler, possibly using a wrong version of gcryp", __FUNCTION__);
     goto leave;
   }
@@ -446,8 +457,8 @@ void Cryptic::triple_ed_dh(np1secPublicKey peer_ephemeral_key, np1secPublicKey p
 
   //bAP
   err = gcry_pk_encrypt(triple_dh_sexp + (peer_is_first ? 0 : 1),
-                        my_ephemeral_secret_scaler,
-                        peer_long_term_key);
+                        my_ephemeral_secret_scalar,
+                        peer_long_term_key->unwrap());
 
   if ( err ) {
     logger.error("teddh: failed to compute dh token\n", __FUNCTION__);
@@ -460,8 +471,8 @@ void Cryptic::triple_ed_dh(np1secPublicKey peer_ephemeral_key, np1secPublicKey p
 
   //BaP
   err = gcry_pk_encrypt(triple_dh_sexp + (peer_is_first ? 1 : 0),
-                        my_long_term_secret_scaler,
-                        peer_ephemeral_key);
+                        my_long_term_secret_scalar,
+                        peer_ephemeral_key->unwrap());
   if ( err ) {
     logger.error("teddh: failed to compute dh token\n", __FUNCTION__);
     logger.error(std::string("Failure: ")+
@@ -472,8 +483,8 @@ void Cryptic::triple_ed_dh(np1secPublicKey peer_ephemeral_key, np1secPublicKey p
 
   //abP
   err = gcry_pk_encrypt(triple_dh_sexp+2,
-                        my_ephemeral_secret_scaler,
-                        peer_ephemeral_key);
+                        my_ephemeral_secret_scalar,
+                        peer_ephemeral_key->unwrap());
 
   if ( err ) {
     logger.error("teddh: failed to compute dh token\n", __FUNCTION__);
@@ -505,8 +516,8 @@ void Cryptic::triple_ed_dh(np1secPublicKey peer_ephemeral_key, np1secPublicKey p
   failed = false;
 
  leave:
-  gcry_sexp_release(my_long_term_secret_scaler);
-  gcry_sexp_release(my_ephemeral_secret_scaler);
+  gcry_sexp_release(my_long_term_secret_scalar);
+  gcry_sexp_release(my_ephemeral_secret_scalar);
   for(int i = 0; i < 3; i++)
     gcry_sexp_release(triple_dh_sexp[i]);
 

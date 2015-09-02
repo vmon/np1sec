@@ -58,8 +58,8 @@ TEST_F(MessageTest, test_user_message){
   np1secAppOps ops;
   HashBlock hb;
 
-  Cryptic::hash("mydummyhash", hb);
-  std::string base  = Cryptic::hash_to_string_buff(hb);
+  np1sec::hash("mydummyhash", hb);
+  std::string base  = hash_to_string_buff(hb);
 
   cryptic.init();
 
@@ -106,7 +106,7 @@ TEST_F(MessageTest, test_join_auth){
   Cryptic np1sec_ephemeral_crypto;
   np1sec_ephemeral_crypto.init();
 
-  UnauthenticatedParticipant test_participant(*(joiner_state->myself),Cryptic::public_key_to_stringbuff(np1sec_ephemeral_crypto.get_ephemeral_pub_key()), true); 
+  UnauthenticatedParticipant test_participant(*(joiner_state->myself),public_key_to_stringbuff(np1sec_ephemeral_crypto.get_ephemeral_pub_key()), true); 
 
   session_view_list.push_back(test_participant);
 
@@ -147,7 +147,7 @@ TEST_F(MessageTest, test_participant_info){
   Cryptic np1sec_ephemeral_crypto;
   np1sec_ephemeral_crypto.init();
 
-  UnauthenticatedParticipant test_participant(*(joiner_state->myself),Cryptic::public_key_to_stringbuff(np1sec_ephemeral_crypto.get_ephemeral_pub_key()), true); 
+  UnauthenticatedParticipant test_participant(*(joiner_state->myself),public_key_to_stringbuff(np1sec_ephemeral_crypto.get_ephemeral_pub_key()), true); 
 
   session_view_list.push_back(test_participant);
 
@@ -191,7 +191,7 @@ TEST_F(MessageTest, test_session_confirmation){
   Cryptic np1sec_ephemeral_crypto;
   np1sec_ephemeral_crypto.init();
 
-  UnauthenticatedParticipant test_participant(*(joiner_state->myself),Cryptic::public_key_to_stringbuff(np1sec_ephemeral_crypto.get_ephemeral_pub_key()), true); 
+  UnauthenticatedParticipant test_participant(*(joiner_state->myself),public_key_to_stringbuff(np1sec_ephemeral_crypto.get_ephemeral_pub_key()), true); 
 
   session_view_list.push_back(test_participant);
 
@@ -224,7 +224,7 @@ TEST_F(MessageTest, test_join_request) {
   Cryptic np1sec_ephemeral_crypto;
   np1sec_ephemeral_crypto.init();
 
-  UnauthenticatedParticipant test_participant(*(joiner_state->myself),Cryptic::public_key_to_stringbuff(np1sec_ephemeral_crypto.get_ephemeral_pub_key()), true); 
+  UnauthenticatedParticipant test_participant(*(joiner_state->myself),public_key_to_stringbuff(np1sec_ephemeral_crypto.get_ephemeral_pub_key()), true); 
 
 
   np1secMessage join_message
