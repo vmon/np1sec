@@ -361,7 +361,7 @@ typedef std::map<std::string,Participant> ParticipantMap;
  * To be used in std::sort to sort the particpant list
  * in a way that is consistent way between all participants
  */
-bool sort_by_long_term_pub_key(PublicKey* lhs, PublicKey* rhs);
+bool sort_by_long_term_pub_key(const PublicKey* lhs, const PublicKey* rhs);
 
 /**
  * operator < needed by map class not clear why but it doesn't compile
