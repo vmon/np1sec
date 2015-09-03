@@ -29,7 +29,7 @@
 
 namespace np1sec {
 
-Logger logger(DEBUG);
+Logger logger(SILLY);
 
 void Logger::initiate_textual_conversions() {
   state_to_text[np1secSession::NONE] = "NONE";

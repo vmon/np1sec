@@ -31,6 +31,7 @@ class LoggerTest : public ::testing::Test {};
 
 TEST_F(LoggerTest, test_logging) {
   Logger log(SILLY); // All logs with level >= SILLY will display
+  log.silly("LoggerTest/test_logging");
   log.config(true, true, log_file); // Log to stdout and file testlog.txt
 
   // Do some logging

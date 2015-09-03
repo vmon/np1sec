@@ -94,6 +94,7 @@ protected: //gtest needs the elements to be protocted
 TEST_F(SessionTest, test_init) {
   //first we need a username and we use it
   //to sign in the room
+  logger.silly("Starting test: SessionTest/test_init");
   string username = "sole-tester";
   std::pair<ChatMocker*, string> mock_aux_data(&mock_server,username);
   mockops->bare_sender_data = static_cast<void*>(&mock_aux_data);
@@ -111,8 +112,10 @@ TEST_F(SessionTest, test_init) {
   //receive your own key share and send confirmation
   mock_server.receive();
 
+  logger.info("Received once in test_init");
   //receive your own confirmation
   mock_server.receive(); //no need actually
+  logger.info("Received twice in test_init");
 
   /*UnauthenticatedParticipantList participants_in_the_room;
     participants_in_the_room.push_back((UnauthenticatedParticipant){user_state->user_nick(), ""});*/
@@ -131,6 +134,7 @@ TEST_F(SessionTest, test_init) {
 }
 
 TEST_F(SessionTest, test_second_join) {
+  logger.silly("Starting test: SessionTest/test_second_join");
   string mock_room_name = string(__FUNCTION__) + "room";
   //first we need a username and we use it
   //to sign in the room
@@ -180,6 +184,7 @@ TEST_F(SessionTest, test_second_join) {
 }
 
 TEST_F(SessionTest, test_solitary_talk) {
+  logger.silly("Starting test: SessionTest/test_solitary_talk");
   //first we need a username and we use it
   //to sign in the room
   //return;
@@ -211,6 +216,7 @@ TEST_F(SessionTest, test_solitary_talk) {
 }
 
 TEST_F(SessionTest, test_join_talk) {
+  logger.silly("Starting test: SessionTest/test_join_talk");
   //return;
   //first we need a username and we use it
   //to sign in the room
@@ -268,6 +274,7 @@ TEST_F(SessionTest, test_join_talk) {
 }
 
 TEST_F(SessionTest, test_three_party_chat) {
+  logger.silly("Starting test: SessionTest/test_three_party_chat");
   //return;
   //first we need a username and we use it
   //to sign in the room
@@ -345,6 +352,7 @@ TEST_F(SessionTest, test_three_party_chat) {
 }
 
 TEST_F(SessionTest, test_ten_party_chat) {
+  logger.silly("Starting test: SessionTest/test_ten_party_chat");
   //return;
   //first we need a username and we use it
   //to sign in the room
@@ -381,6 +389,7 @@ TEST_F(SessionTest, test_ten_party_chat) {
 }
 
 TEST_F(SessionTest, test_solitary_leave) {
+  logger.silly("Starting test: SessionTest/test_solitary_leave");
   //first we need a username and we use it
   //to sign in the room
   //return;
@@ -408,6 +417,7 @@ TEST_F(SessionTest, test_solitary_leave) {
 }
 
 TEST_F(SessionTest, test_leave_from_2p_conv) {
+  logger.silly("Starting test: SessionTest/test_leave_from_2p_conv");
   //first we need a username and we use it
   //to sign in the room
   //return;
@@ -464,6 +474,7 @@ TEST_F(SessionTest, test_leave_from_2p_conv) {
 }
 
 TEST_F(SessionTest, test_immature_leave_from_2p_conv) {
+  logger.silly("Starting test: SessionTest/test_immature_leave_from_2p_conv");
   //first we need a username and we use it
   //to sign in the room
   //return;
@@ -516,6 +527,7 @@ TEST_F(SessionTest, test_immature_leave_from_2p_conv) {
 }
 
 TEST_F(SessionTest, test_concurrent_join) {
+  logger.silly("Starting test: SessionTest/test_concurrent_join");
   //return;
   //first we need a username and we use it
   //to sign in the room
@@ -578,6 +590,7 @@ TEST_F(SessionTest, test_concurrent_join) {
 }
 
 TEST_F(SessionTest, test_concurrent_join_leave) {
+  logger.silly("Starting test: SessionTest/test_concurrent_join_leave");
 
   //this test is not working with 3 participants cause chatmocker number of particiants
   //is comming from the server while everything else is based on messages

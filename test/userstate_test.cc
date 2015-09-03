@@ -18,18 +18,21 @@
 
 #include <gtest/gtest.h>
 #include "src/userstate.h"
+#include "src/logger.h"
 
 np1secAppOps ops;
 
 class UserStateTest : public ::testing::Test { };
 
 TEST_F(UserStateTest, test_init) {
+  logger.silly("UserStateTest/test_init");
   std::string name = "tester";
   np1secUserState* user_state = new np1secUserState(name, &ops);
   EXPECT_TRUE(user_state->init());
 }
 
 TEST_F(UserStateTest, test_join) {
+  logger.silly("UserStateTest/test_join");
   std::string name = "tester";
   std::string room_name = "room";
   np1secUserState* user_state = new np1secUserState(name, &ops);
@@ -38,6 +41,7 @@ TEST_F(UserStateTest, test_join) {
 }
 
 TEST_F(UserStateTest, test_join_accept) {
+  logger.silly("UserStateTest/test_join_accept");
   std::string accepter_name = "accepter";
   std::string joiner_name = "joiner";
   std::string room_name = "room";

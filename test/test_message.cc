@@ -47,6 +47,7 @@ TEST_F(MessageTest, test_compute_message_id) {
 }
 
 TEST_F(MessageTest, test_user_message){
+  logger.silly("MessageTest/test_user_message");
 
   std::string room_name = "test_room_name";
   std::string sender_id;
@@ -82,6 +83,7 @@ TEST_F(MessageTest, test_user_message){
 }
 /*
 TEST_F(MessageTest, test_join_auth){
+  logger.silly("MessageTest/test_join_auth");
   std::string room_name = "test_room_name";
   std::string base  = "0xfd, 0xfc, 0xfe, 0xfa";
   UnauthenticatedParticipantList session_view_list;
@@ -124,6 +126,7 @@ TEST_F(MessageTest, test_join_auth){
 
 
 TEST_F(MessageTest, test_participant_info){
+  logger.silly("MessageTest/test_participant_info");
   std::string room_name = "test_room_name";
   std::string base  = "0xfd, 0xfc, 0xfe, 0xfa";
   UnauthenticatedParticipantList session_view_list;
@@ -165,6 +168,7 @@ TEST_F(MessageTest, test_participant_info){
 }
 
 TEST_F(MessageTest, test_session_confirmation){
+  logger.silly("MessageTest/test_session_confirmation");
 
   std::string room_name = "test_room_name";
   std::string base  = "0xfd, 0xfc, 0xfe, 0xfa";
@@ -210,6 +214,7 @@ TEST_F(MessageTest, test_session_confirmation){
 }
 
 TEST_F(MessageTest, test_join_request) {
+  logger.silly("MessageTest/test_join_request");
 
   std::string room_name = "test_room_name";
   
@@ -242,6 +247,7 @@ TEST_F(MessageTest, test_join_request) {
 }
 */
 // TEST_F(MessageTest, test_format_sendable_message) {
+//  logger.silly("MessageTest/test_format_sendable_message");
 //   Cryptic cryptic;
 //   SessionID session_id = {1};
 //   std::string sender_id = "test_user";

@@ -40,7 +40,7 @@ enum log_level_t {
   ABORT
 };
 
-const log_level_t default_log_level = DEBUG;
+const log_level_t default_log_level = SILLY;//DEBUG;
 
 class Logger {
 protected:

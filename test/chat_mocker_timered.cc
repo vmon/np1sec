@@ -24,9 +24,11 @@
 #include "src/userstate.h"
 #include "src/common.h"
 #include "test/chat_mocker_timered.h" 
+#include "src/logger.h"
 
 void intermediate_cb(evutil_socket_t fd, short what, void* arg)
 {
+  logger.silly("intermediate_cb");
   (void) fd; (void) what;
   
   auto fn_and_data = reinterpret_cast<pair<timeout_callback, void*>*>(arg);
@@ -35,6 +37,7 @@ void intermediate_cb(evutil_socket_t fd, short what, void* arg)
 
 void check_receive_queue(evutil_socket_t fd, short what, void *arg)
 {
+  logger.silly("check_receive_queue");
   (void) fd; (void) what;
   ((ChatMockerTimered*)arg)->receive();
 
@@ -64,6 +67,7 @@ std::string EventManager::next_identifier()
 
 std::string* EventManager::add_timeout(event_callback_fn cb, void* arg, const timeval* timeout)
 {
+  logger.silly("EventManager/add_timeout");
   std::string* new_ident = new std::string;
   *new_ident = next_identifier();
   timers[*new_ident] = evtimer_new(base, cb, arg);
@@ -73,6 +77,7 @@ std::string* EventManager::add_timeout(event_callback_fn cb, void* arg, const ti
 
 struct event* EventManager::get(std::string* identifier)
 {
+  logger.silly("EventManager/get");
   auto requested_event =  timers.find(*identifier);
   return (requested_event == timers.end()) ? nullptr : requested_event->second;
 }
@@ -84,6 +89,7 @@ int EventManager::size()
 
 void EventManager::remove_timeout(std::string* identifier)
 {
+  logger.silly("EventManager/remove_timeout");
   event* evt = get(identifier);
   if (evt) {
     // Delete an event and check that the return code is 0 (success)

@@ -70,6 +70,7 @@ SecureString::SecureString(const uint8_t* data, size_t length)
  */
 SecureString::~SecureString()
 {
+  logger.info("Deleting secure string");
   this->wipe_securely();
 }
 
@@ -117,6 +118,7 @@ bool SecureString::operator!=(const SecureString& other)
  */
 static void _delete_sexp(gcry_sexp_t* sexp)
 {
+  logger.info("Releasing s-expression");
   gcry_sexp_release(*sexp);
   delete sexp;
 }
@@ -761,6 +763,7 @@ std::string Cryptic::Decrypt(std::string encrypted_text) {
 
 Cryptic::~Cryptic()
 {
+  logger.info("Deleting crytpic keys");
   delete ephemeral_key;
   delete ephemeral_pub_key;
   delete ephemeral_prv_key;

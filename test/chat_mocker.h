@@ -74,6 +74,7 @@ class MockRoom {
             void (*receive_handler)(std::string room_name,
                                     std::string message,
                                     void* user_data), void* user_data) {
+      mock_logger.silly("MockRoom/join");
       _participant_list[nick].nick = nick;
       _participant_list[nick].receive_handler = receive_handler;
       _participant_list[nick].aux_data = user_data;
@@ -88,6 +89,7 @@ class MockRoom {
      access function for participants
    */
   std::vector<std::string>  participant_list()  {
+    mock_logger.silly("MockRoom/participant_list");
     std::vector<std::string> participant_nicks;
       for (std::map<std::string, MockParticipant>::iterator
              cur_participant = _participant_list.begin();
@@ -101,15 +103,18 @@ class MockRoom {
   }
 
   void intend_to_leave(std::string nick) {
+    mock_logger.silly("MockRoom/intend_to_leave");
     broadcast("@<o>@INTEND2LEAVE@<o>@" + nick);
   }
 
   void leave(std::string nick) {
+    mock_logger.silly("MockRoom/leave");
     _participant_list[nick].scheduled_to_leave = true;
     broadcast("@<o>@LEAVE@<o>@" + nick);
   }
 
   void send(std::string sender_nick, std::string message) {
+      mock_logger.silly("MockRoom/send");
       global_message_id++;
       broadcast("@<o>@SEND@<o>@"+
                std::to_string(global_message_id)+
@@ -117,6 +122,7 @@ class MockRoom {
     }
 
   void receive() {
+    mock_logger.silly("MockRoom/receive");
     std::string leaving_nick;
     while (!message_queue.empty())
       {
@@ -181,6 +187,7 @@ class ChatMocker {
                                        std::string message,
                                        void* user_data),
                void* user_data) {
+    mock_logger.silly("ChatMocker/sign_in");
     signed_in_participant[nick].nick = nick;
     signed_in_participant[nick].receive_handler = receive_handler;
     signed_in_participant[nick].aux_data = user_data;
@@ -190,6 +197,7 @@ class ChatMocker {
    * join the room by adding the name of the participant to the room list
    */
   void join(std::string room, std::string nick) {
+    mock_logger.silly("ChatMocker/join");
     if (rooms.find(room) == rooms.end())
       rooms.insert(std::pair<std::string, MockRoom>(room, MockRoom(room)));
     
@@ -203,6 +211,7 @@ class ChatMocker {
      it makes the base for the list of participant in the room
    */
   std::vector<std::string> participant_list(std::string room) {
+    mock_logger.silly("ChatMocker/participant_list");
     return rooms[room].participant_list();
   }
 
@@ -212,6 +221,7 @@ class ChatMocker {
    */
   void intend_to_leave(std::string room, std::string nick)
   {
+    mock_logger.silly("ChatMocker/intend_to_leave");
     //In normal situation you need to call a local function
     //for the similicity in the mock version, we make this through
     //sending a message to the room and other participants just
@@ -224,6 +234,7 @@ class ChatMocker {
    * drop the participant from the room
    */
   void leave(std::string room, std::string nick) {
+    mock_logger.silly("ChatMocker/leave");
     rooms[room].leave(nick);
   }
 
@@ -231,6 +242,7 @@ class ChatMocker {
    * send a message to the room
    */
   void send(std::string room, std::string nick, std::string message) {
+    mock_logger.silly("ChatMocker/send");
     rooms[room].send(nick, message);
   }
 
@@ -239,6 +251,7 @@ class ChatMocker {
    */
   void receive()
   {
+    mock_logger.silly("ChatMocker/receive");
     for(auto it = rooms.begin(); it != rooms.end(); it++)
       it->second.receive();
   }

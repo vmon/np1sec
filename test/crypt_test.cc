@@ -21,6 +21,7 @@
 
 #include "contrib/gtest/include/gtest/gtest.h"
 #include "src/crypt.h"
+#include "src/logger.h"
 
 using namespace np1sec;
 /*
@@ -56,6 +57,7 @@ class CryptTest : public ::testing::Test { };
 class SecureStringTest : public ::testing::Test { };
 
 TEST_F(CryptTest, test_hash) {
+  logger.silly("CryptTest/test_hash");
   std::string str = "abc";
   std::string exp =
     "ba7816bf8f01cfea414140de5dae2223"
@@ -74,6 +76,7 @@ TEST_F(CryptTest, test_hash) {
 }
 
 TEST_F(CryptTest, test_encrypt_decrypt) {
+  logger.silly("CryptTest/test_encrypt_decrypt");
   Cryptic cryptic;
   std::string test_text = "This is a string to be encrypted";
   std::string enc_text = cryptic.Encrypt(test_text.c_str());
@@ -83,6 +86,7 @@ TEST_F(CryptTest, test_encrypt_decrypt) {
 
 
 TEST_F(CryptTest, test_sign_verify) {
+  logger.silly("CryptTest/test_sign_verify");
   Cryptic cryptic;
   std::string test_text = "This is a string to be encrypted";
   unsigned char *sigbuf = NULL;
@@ -99,6 +103,7 @@ TEST_F(CryptTest, test_sign_verify) {
 }
 
 TEST_F(CryptTest, test_teddh_test) {
+  logger.silly("CryptTest/test_teddh_test");
 
   AsymmetricKeyPair* alice_keys = generate_key_pair();
   AsymmetricKeyPair* bob_keys = generate_key_pair();
@@ -149,6 +154,7 @@ TEST_F(CryptTest, test_teddh_test) {
  */
 TEST_F(SecureStringTest, test_char_ptr_constructor_pass)
 {
+  logger.silly("CryptTest/test_chat_ptr_constructor_pass");
   char* str = new char[4];
   str[0] = 100; str[1] = 105;
   str[2] = 0; str[3] = 106;
@@ -168,6 +174,7 @@ TEST_F(SecureStringTest, test_char_ptr_constructor_pass)
  */
 TEST_F(SecureStringTest, test_char_ptr_constructor_fail)
 {
+  logger.silly("CryptTest/test_chat_ptr_constructor_fail");
   char* str = new char[4];
   str[0] = 134; str[1] = 0;
   str[2] = -10; str[3] = 10;
@@ -186,6 +193,7 @@ TEST_F(SecureStringTest, test_char_ptr_constructor_fail)
  */
 TEST_F(SecureStringTest, test_uint8_t_ptr_constructor)
 {
+  logger.silly("CryptTest/test_uint8_t_ptr_constructor");
   uint8_t* bytes = new uint8_t[4];
   bytes[0] = 98; bytes[1] = 123;
   bytes[2] = 0; bytes[3] = 255;
@@ -204,6 +212,7 @@ TEST_F(SecureStringTest, test_uint8_t_ptr_constructor)
  */
 TEST_F(SecureStringTest, test_data_zeroing)
 {
+  logger.silly("CryptTest/test_data_zeroing");
   uint8_t bytes[4] = {100, 0, 123, 255};
   SecureStringT sstr(bytes, static_cast<size_t>(4));
   sstr.wipe_securely();

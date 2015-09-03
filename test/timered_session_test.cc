@@ -147,6 +147,7 @@ void check_log_for_phrase(void* arg)
 
 // TEST_F(SessionTest, test_heartbeat_timer)
 // {
+// logger.silly("TimeredSessionTest/test_heartbeat_timer");
 //   //first we need a username and we use it
 //   //to sign in the room
 //   string username = "sole-tester";
@@ -208,6 +209,7 @@ void check_log_for_phrase(void* arg)
 
 /*TEST_F(SessionTest, test_start_ack_timers) {
   //Gen participant list
+// logger.silly("TimeredSessionTest/test_start_ack_timers");
   Participant p;
 
   session.start_ack_timers();
@@ -219,7 +221,7 @@ void check_log_for_phrase(void* arg)
 } 
 
 TEST_F(SessionTest, test_receive_ack_timer) {
-
+  logger.silly("SessionTest/test_receive_ack_timer");
   std::string sender_id = "1";
 
   session.start_receive_ack_timer(sender_id);
@@ -230,6 +232,7 @@ TEST_F(SessionTest, test_receive_ack_timer) {
 }
 
 TEST_F(SessionTest, test_stop_timer_send) {
+  logger.silly("SessionTest/test_stop_timer_send");
   //Gen participant list
   Participant p;
 
@@ -242,6 +245,7 @@ TEST_F(SessionTest, test_stop_timer_send) {
 }
 
 TEST_F(SessionTest, test_stop_timer_receive) {
+  logger.silly("SessionTest/test_stop_timer_receive");
   std::string acknowledger_id = "1";
 
   session.stop_timer_receive(acknowledger_id);
@@ -256,6 +260,7 @@ TEST_F(SessionTest, test_stop_timer_receive) {
 
 TEST_F(TimeredSessionTest, test_resession_forward_secrecy)
 {
+  logger.silly("TimeredSessionTest/test_recession_forward_secrecy");
   //first we need a username and we use it
   //to sign in the room
   string username = "sole-tester";

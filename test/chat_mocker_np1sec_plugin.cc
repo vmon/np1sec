@@ -33,6 +33,7 @@
 // npsec1 functions
 #include "src/userstate.h"
 #include "src/common.h"
+#include "src/logger.h"
 
 using namespace std;
 using namespace np1sec;
@@ -40,6 +41,7 @@ using namespace np1sec;
 void chat_mocker_np1sec_plugin_join(std::string room_name,
                                         void* aux_data)
 {
+  logger.silly("chat_mocker_np1sec_plugin_join");
   pair<np1secUserState*, ChatMocker*>* user_server_state = reinterpret_cast<pair<np1secUserState*, ChatMocker*>*>(aux_data);
   //It is chat client duty to provide the userstate class with
   //the list of participants not really other participants are going to do it.
@@ -56,6 +58,7 @@ void chat_mocker_np1sec_plugin_receive_handler(std::string room_name,
                                                std::string np1sec_message,
                                                void* aux_data)
 {
+  logger.silly("chat_mocker_np1sec_plugin_receive_handler");
   pair<np1secUserState*, ChatMocker*>* user_server_state = reinterpret_cast<pair<np1secUserState*, ChatMocker*>*>(aux_data);
 
   // we need to process message and see if it is join leave or actual message
@@ -67,14 +70,16 @@ void chat_mocker_np1sec_plugin_receive_handler(std::string room_name,
   if (np1sec_message.find("@<o>@JOIN@<o>@") == 0) {
     // check if it is ourselves or somebody else who is joining
     string joining_nick = np1sec_message.substr(strlen("@<o>@JOIN@<o>@"));
-
+    logger.silly("Branch 1");
     if (user_server_state->first->user_nick() == joining_nick) {
       try {
+        logger.silly("Branch 1.1");
         user_server_state->first->join_room(room_name, user_server_state->second->participant_list(room_name));
       } catch(np1secInsufficientCredentialException& e) {
         logger.error(joining_nick + " failed to join room" + room_name);
       }
     } else {
+      logger.silly("Branch 1.2");
       user_server_state->first->increment_room_size(room_name);
       //we don't need to react, (we can, the protocol doesn't stop us
       //but we are lazy and we react to the join request sent by the joiner
@@ -86,26 +91,36 @@ void chat_mocker_np1sec_plugin_receive_handler(std::string room_name,
       //ignore
     }
   } else if (np1sec_message.find("@<o>@INTEND2LEAVE@<o>@") == 0) {
+    logger.silly("Branch 1.3");
     string leaving_nick = np1sec_message.substr(strlen("@<o>@INTEND2LEAVE@<o>@"));
     if (leaving_nick==user_server_state->first->user_nick()) {
+    logger.silly("Branch 1.3.1");
       user_server_state->first->leave_room(room_name);
     } else {
+      logger.silly("Branch 1.3.2");
       //do nothing. //in real life this won't come as a message
       //we are using the room both for IM and internal  messaging
       //apparatus
     }
   } else if (np1sec_message.find("@<o>@LEAVE@<o>@") == 0) {
+    logger.silly("Branch 1.4");
     string leaving_nick = np1sec_message.substr(strlen("@<o>@LEAVE@<o>@"));
     if (leaving_nick != user_server_state->first->user_nick()) {
+    logger.silly("Branch 1.4.1");
+    string leaving_nick = np1sec_message.substr(strlen("@<o>@LEAVE@<o>@"));
       //kick out in case haven't left cleanly.
       user_server_state->first->shrink(room_name, leaving_nick);
       
     }else {
+      logger.silly("Branch 1.4.2");
+      string leaving_nick = np1sec_message.substr(strlen("@<o>@LEAVE@<o>@"));
       //that shouldn't happen, if I left I shouldn't receive messages
       assert(0);
     }
     
   } else if (np1sec_message.find("@<o>@SEND@<o>@") == 0) {
+    logger.silly("Branch 1.5");
+    string leaving_nick = np1sec_message.substr(strlen("@<o>@LEAVE@<o>@"));
     string message_with_id = np1sec_message.substr(strlen("@<o>@SEND@<o>@"));
     size_t sender_pos = message_with_id.find("@<o>@");
     string message_id_str = message_with_id.substr(0, sender_pos);
@@ -136,6 +151,7 @@ void chat_mocker_np1sec_plugin_send(std::string room_name,
                                     std::string message,
                                     void* aux_data)
 {
+  logger.silly("chat_mocker_np1sec_plugin_send");
   pair<np1secUserState*, ChatMocker*>* user_server_state = reinterpret_cast<pair<np1secUserState*, ChatMocker*>*>(aux_data);
 
   user_server_state->first->send_handler(room_name, message);
@@ -145,6 +161,7 @@ void chat_mocker_np1sec_plugin_send(std::string room_name,
 // Just a wrapper to call the mocker send function
 void send_bare(std::string room_name, std::string message, void* data)
 {
+  logger.silly("chat_mocker_np1sec_plugin_send_bare");
   //pair<np1secUserState*, ChatMocker*>* user_server_state = reinterpret_cast<pair<np1secUserState*, ChatMocker*>*>(data);
   ChatMocker* chat_server = (static_cast<pair<ChatMocker*, std::string>*>(data))->first;
   std::string sender = (static_cast<pair<ChatMocker*, std::string>*>(data))->second;
@@ -156,6 +173,7 @@ void send_bare(std::string room_name, std::string message, void* data)
 // informing join and leave
 void new_session_announce(std::string room_name, std::vector<std::string> plist, void* aux_data)
 {
+  logger.silly("new_session_announce");
   std::pair<ChatMocker*, string>* server_and_nick = reinterpret_cast<std::pair<ChatMocker*, string>*>(aux_data);
   if (std::find(plist.begin(), plist.end(), server_and_nick->second) == plist.end()) {//we are leaving the room
     cout << server_and_nick->second << "'s client: " << server_and_nick->second << " left room" << endl;
@@ -188,6 +206,7 @@ void display_message(std::string room_name, std::string sender_nickname, std::st
 // data           - A pair containing a chatmocker and a string
 void* set_timer(void (*timer_callback)(void* opdata), void* opdata, uint32_t interval, void* data)
 {
+  logger.silly("set_timer");
   ChatMocker* chat_server = (reinterpret_cast<pair<ChatMocker*, std::string>*>(data))->first;
   pair<timeout_callback, void*>* my_data = new pair<timeout_callback, void*>(timer_callback, opdata);
   std::string* s = chat_server->add_timeout(my_data, interval);
@@ -199,6 +218,7 @@ void* set_timer(void (*timer_callback)(void* opdata), void* opdata, uint32_t int
 // data       - A pair containing a chatmocker and a string
 void axe_timer(void* identifier, void* data)
 {
+  logger.silly("axe_timer");
   std::string* ident = reinterpret_cast<std::string*>(identifier);
   ChatMocker* chat_server = (reinterpret_cast<pair<ChatMocker*, std::string>*>(data))->first;
   chat_server->remove_timeout(ident);

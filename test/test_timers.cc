@@ -83,6 +83,7 @@ void test_stop_timer(ChatMocker chat_server, struct event_base* base, void (*tim
 }
 
 TEST_F(SessionTest, test_init) {
+  logger.silly("SessionTest/test_init");
   //first we need a username and we use it
   //to sign in the room
   //return;
@@ -108,6 +109,7 @@ TEST_F(SessionTest, test_init) {
 }
 
 TEST_F(TimerTest, test_timers)
+  logger.silly("SessionTest/test_timers");
 {
   test_fire_timer(mock_server, base, cb_send_heartbeat, session);
   test_stop_timer(mock_server, base, cb_send_heartbeat, session);

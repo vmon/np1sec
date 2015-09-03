@@ -31,6 +31,7 @@ extern "C" {
 #include "src/userstate.h"
 #include "src/common.h"
 #include "src/interface.h"
+#include "src/logger.h"
 
 #define CUSTOM_USER_DIRECTORY "/tmp/test_user"
 #define CUSTOM_PLUGIN_PATH ""
@@ -42,6 +43,7 @@ char room[128];
 
 void write_conv(PurpleConversation *conv, const char *who, const char *alias,
                 const char *message, PurpleMessageFlags flags, time_t mtime) {
+  logger.silly("write_conv");
   UNUSED(conv);
   UNUSED(flags);
   UNUSED(mtime);
@@ -76,6 +78,7 @@ PurpleConversationUiOps conv_uiops = {
 };
 
 void ui_init(void) {
+  logger.silly("ui_init");
   purple_conversations_set_ui_ops(&conv_uiops);
 }
 
@@ -91,6 +94,7 @@ static PurpleCoreUiOps uiops = {
 };
 
 static void signed_on(PurpleConnection *gc, gpointer null) {
+  logger.silly("signed_on");
   UNUSED(null);
   PurpleAccount *account = purple_connection_get_account(gc);
   printf("Account connected: %s %s\n", account->username, account->protocol_id);
@@ -103,6 +107,7 @@ static void signed_on(PurpleConnection *gc, gpointer null) {
 
 static void process_sending_chat(PurpleAccount *account, char **message, int id,
                                  void *m) {
+  logger.silly("process_sending_chat");
   UNUSED(account);
   np1secUserState* user_state = reinterpret_cast<np1secUserState*>(m);
   std::string prefix = std::string("np1sec:");
@@ -117,6 +122,7 @@ static void process_sending_chat(PurpleAccount *account, char **message, int id,
 static gboolean process_receiving_chat(PurpleAccount *account, char **sender,
                                        char **message, PurpleConversation *conv,
                                        int *flags, void *m) {
+  logger.silly("process_receiving_chat");
   UNUSED(account);
   UNUSED(sender);
   UNUSED(flags);
@@ -131,6 +137,7 @@ static gboolean process_receiving_chat(PurpleAccount *account, char **sender,
 
 static void process_chat_join_failed(PurpleConnection *gc,
                                      GHashTable *components, void *m) {
+  logger.silly("process_chat_join_failed");
   UNUSED(gc);
   UNUSED(components);
   UNUSED(m);
@@ -138,6 +145,7 @@ static void process_chat_join_failed(PurpleConnection *gc,
 }
 
 static void process_chat_joined(PurpleConversation *conv, void *m) {
+  logger.silly("process_chat_joined");
   np1secUserState* user_state = reinterpret_cast<np1secUserState*>(m);
   //todo: Arlo could you convert conv->chat to vector<string>
   std::vector<std::string> current_occupants;
@@ -149,6 +157,7 @@ static void process_buddy_chat_joined(PurpleConversation *conv,
                                       const char *name,
                                       PurpleConvChatBuddyFlags flags,
                                       gboolean new_arrival, void *m) {
+  logger.silly("process_buddy_chat_joined");
   UNUSED(conv);
   UNUSED(flags);
   UNUSED(new_arrival);
@@ -158,6 +167,7 @@ static void process_buddy_chat_joined(PurpleConversation *conv,
 
 static void process_chat_buddy_left(PurpleConversation *conv, const char *name,
                                     const char *reason, void *m) {
+  logger.silly("process_buddy_chat_left");
   UNUSED(conv);
   UNUSED(reason);
   UNUSED(m);
@@ -165,6 +175,7 @@ static void process_chat_buddy_left(PurpleConversation *conv, const char *name,
 }
 
 static void connect_to_signals(np1secUserState* user_state) {
+  logger.silly("connect_to_signals");
   static int handle;
   void *conn_handle = purple_connections_get_handle();
   void *conv_handle = purple_conversations_get_handle();
@@ -200,6 +211,7 @@ void purple_glib_io_destroy(gpointer data) {
 
 gboolean purple_glib_io_invoke(GIOChannel *source, GIOCondition condition,
                                gpointer data) {
+  logger.silly("purple_glib_io_invoke");
   PurpleGLibIOClosure *closure = static_cast<PurpleGLibIOClosure *>(data);
   int purple_cond = 0;
 
@@ -216,6 +228,7 @@ gboolean purple_glib_io_invoke(GIOChannel *source, GIOCondition condition,
 
 guint glib_input_add(gint fd, PurpleInputCondition condition,
                      PurpleInputFunction function, gpointer data) {
+  logger.silly("glib_input_add");
   PurpleGLibIOClosure *closure = g_new0(PurpleGLibIOClosure, 1);
   GIOChannel *channel;
   int cond = 0;
@@ -259,6 +272,7 @@ PurpleEventLoopUiOps glib_eventloops = {
 };
 
 void purple_init(void) {
+  logger.silly("purple_init");
   purple_util_set_user_dir(CUSTOM_USER_DIRECTORY);
   purple_debug_set_enabled(FALSE);
   purple_core_set_ui_ops(&uiops);
@@ -279,6 +293,7 @@ void purple_init(void) {
 
 static gboolean io_callback(GIOChannel *io, GIOCondition condition,
                             gpointer p) {
+  logger.silly("io_callback");
   UNUSED(condition);
   PurpleAccount *account = reinterpret_cast<PurpleAccount *>(p);
   gchar in;
