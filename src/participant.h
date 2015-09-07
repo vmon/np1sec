@@ -248,7 +248,7 @@ class Participant {
     
   {
     PublicKey pubkey(rhs.long_term_pub_key);
-    long_term_pub_key = copy_crypto_resource(&pubkey);
+    long_term_pub_key = copy_crypto_resource(pubkey);
     set_ephemeral_key(rhs.raw_ephemeral_key);
     memcpy(future_raw_ephemeral_key, rhs.future_raw_ephemeral_key, sizeof(HashBlock));
     memcpy(p2p_key, rhs.p2p_key, sizeof(HashBlock));
@@ -361,7 +361,7 @@ typedef std::map<std::string,Participant> ParticipantMap;
  * To be used in std::sort to sort the particpant list
  * in a way that is consistent way between all participants
  */
-bool sort_by_long_term_pub_key(const PublicKey* lhs, const PublicKey* rhs);
+bool sort_by_long_term_pub_key(PublicKey lhs, PublicKey rhs);
 
 /**
  * operator < needed by map class not clear why but it doesn't compile

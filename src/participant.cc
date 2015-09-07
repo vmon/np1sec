@@ -38,12 +38,9 @@ std::string participants_to_string(const ParticipantMap& plist)
  * To be used in std::sort to sort the particpant list
  * in a way that is consistent way between all participants
  */
-bool sort_by_long_term_pub_key(const PublicKey* lhs, const PublicKey* rhs)
+bool sort_by_long_term_pub_key(PublicKey lhs, PublicKey rhs)
 {
-  PublicKey* new_lhs = const_cast<PublicKey*>(lhs);
-  PublicKey* new_rhs = const_cast<PublicKey*>(rhs);
-  return public_key_to_stringbuff(new_lhs) < public_key_to_stringbuff(new_rhs);
-
+  return public_key_to_stringbuff(lhs) < public_key_to_stringbuff(rhs);
 }
 
 /**
@@ -58,7 +55,7 @@ bool operator<(const Participant& lhs, const Participant& rhs)
   if (lhs.id.nickname < rhs.id.nickname) return true;
   PublicKey lhs_wrapped(lhs.long_term_pub_key);
   PublicKey rhs_wrapped(rhs.long_term_pub_key);
-  return sort_by_long_term_pub_key(&lhs_wrapped, &rhs_wrapped);
+  return sort_by_long_term_pub_key(lhs_wrapped, rhs_wrapped);
   
 }
  
@@ -129,11 +126,11 @@ void Participant::compute_p2p_private(np1secAsymmetricKey thread_user_id_key, Cr
   PublicKey lt_wrapped(long_term_pub_key);
   AsymmetricKeyPair pair(thread_user_id_key);
   thread_user_crypto->triple_ed_dh(
-    &ek_wrapped,
-    &lt_wrapped,
-    &pair,
+    ek_wrapped,
+    lt_wrapped,
+    pair,
     sort_by_long_term_pub_key(
-      &lt_wrapped,
+      lt_wrapped,
       pair.public_key),
     &p2p_key);
                       

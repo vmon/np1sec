@@ -124,6 +124,16 @@ static void _delete_sexp(gcry_sexp_t* sexp)
 }
 
 /**
+ * Don't do anything when a shared_ptr<gcry_sexp_t> goes out of scope.
+ * Not to be called directly.
+ * @param {gcry_sexp_t*} sexp - A pointer to the s-exp passed by the shared_ptr deconstructor
+ */
+static void _do_nothing(gcry_sexp_t* sexp)
+{
+  sexp = sexp; // To prevent the compiler from complaining
+}
+
+/**
  * Constructor for the AsymmetricKey base class, wrapping a gcry_sexp_t.
  * @param {gcry_sexp_t} data - The s-expression to wrap
  */
@@ -137,15 +147,24 @@ AsymmetricKey::AsymmetricKey(gcry_sexp_t data)
 }
 
 /**
+ * Default contructor for the AsymmetricKey class that marks the data
+ * as unusable.
+ */
+AsymmetricKey::AsymmetricKey()
+{
+  data_ptr = std::shared_ptr<gcry_sexp_t>(nullptr, _do_nothing);
+}
+
+/**
  * Constructor for the AsymmetricKeyPair class, which simply contains
  * data associated with key pairs, the components of which are public.
  * @param {gcry_sexp_t} sexp - The s-expression containing all the key data
  */
 AsymmetricKeyPair::AsymmetricKeyPair(gcry_sexp_t sexp)
 {
-  public_key = new PublicKey(gcry_sexp_find_token(sexp, "public-key", 0));
-  private_key = new PrivateKey(gcry_sexp_find_token(sexp, "private-key", 0));
-  scalar = new Scalar(gcry_sexp_nth(gcry_sexp_find_token(sexp, "a", 0), 1));
+  public_key = PublicKey(gcry_sexp_find_token(sexp, "public-key", 0));
+  private_key = PrivateKey(gcry_sexp_find_token(sexp, "private-key", 0));
+  scalar = Scalar(gcry_sexp_nth(gcry_sexp_find_token(sexp, "a", 0), 1));
 }
 
 gcry_error_t hash(const void *buffer, size_t buffer_len, HashBlock hb, bool secure) {
@@ -186,7 +205,7 @@ Cryptic::Cryptic() {
 
 }
 
-AsymmetricKeyPair* generate_key_pair() {
+AsymmetricKeyPair generate_key_pair() {
   gcry_sexp_t* generated = new gcry_sexp_t;
   /* Generate a new Ed25519 key pair. */
   gcry_error_t err = 0;
@@ -207,13 +226,10 @@ AsymmetricKeyPair* generate_key_pair() {
     return nullptr;
   }
   
-  AsymmetricKeyPair* pair = new AsymmetricKeyPair(*generated);
-  if ( !pair->public_key
-    || !pair->private_key
-    || !pair->scalar
-    || !pair->public_key->unwrap()
-    || !pair->private_key->unwrap()
-    || !pair->scalar->unwrap()) {
+  AsymmetricKeyPair pair(*generated);
+  if ( !pair.public_key.unwrap()
+    || !pair.private_key.unwrap()
+    || !pair.scalar.unwrap()) {
     logger.error(std::string("Key failure: ") + gcry_strsource(err)+ "/" + gcry_strerror(err), __FUNCTION__);
     throw np1secCryptoException();
     return nullptr;
@@ -239,22 +255,17 @@ bool Cryptic::init() {
     logger.error(std::string("Key failure: ") + gcry_strsource(err)+"/" + gcry_strerror(err), __FUNCTION__);
     throw np1secCryptoException();
   }
-  ephemeral_key = new AsymmetricKey(eph_key_raw);
-  ephemeral_pub_key = new PublicKey(gcry_sexp_find_token(eph_key_raw, "public-key", 0));
-  if (!ephemeral_pub_key || !ephemeral_pub_key->unwrap()) {
-    delete ephemeral_key;
+  ephemeral_key = AsymmetricKey(eph_key_raw);
+  ephemeral_pub_key = PublicKey(gcry_sexp_find_token(eph_key_raw, "public-key", 0));
+  if (!ephemeral_pub_key.unwrap()) {
     logger.error("failed to retrieve public key",__FUNCTION__);
     throw np1secCryptoException();
-    return false;
   }
 
-  ephemeral_prv_key = new PrivateKey(gcry_sexp_find_token(eph_key_raw, "private-key", 0));
-  if (!ephemeral_prv_key || !ephemeral_prv_key->unwrap()) {
-    delete ephemeral_key;
-    delete ephemeral_pub_key;
+  ephemeral_prv_key = PrivateKey(gcry_sexp_find_token(eph_key_raw, "private-key", 0));
+  if (!ephemeral_prv_key.unwrap()) {
     logger.error("failed to retrieve private key", __FUNCTION__);
     throw np1secCryptoException();
-    return false;
   }
 
   return true;
@@ -265,8 +276,8 @@ gcry_sexp_t get_public_key(np1secAsymmetricKey key_pair)
   return gcry_sexp_find_token(key_pair, "public-key", 0);
 }
 
-std::string public_key_to_stringbuff(PublicKey* asym_public_key) {
-  gcry_sexp_t public_key = asym_public_key->unwrap(); 
+std::string public_key_to_stringbuff(PublicKey asym_public_key) {
+  gcry_sexp_t public_key = asym_public_key.unwrap(); 
   gcry_sexp_t q_of_pub_key = gcry_sexp_find_token(public_key, "q", 0);
   if (!q_of_pub_key)
     throw np1secCryptoException();
@@ -392,9 +403,9 @@ np1secPublicKey extract_public_key(const np1secAsymmetricKey complete_key)
   return gcry_sexp_find_token(complete_key, "public-key", 0);
 }
 
-gcry_sexp_t copy_crypto_resource(AsymmetricKey* crypto_resource_wrapped)
+gcry_sexp_t copy_crypto_resource(AsymmetricKey crypto_resource_wrapped)
 {
-  gcry_sexp_t crypto_resource = crypto_resource_wrapped->unwrap();
+  gcry_sexp_t crypto_resource = crypto_resource_wrapped.unwrap();
   gcry_sexp_t copied_resource;
   gcry_error_t err = gcry_sexp_build(&copied_resource,
                         NULL,
@@ -428,7 +439,7 @@ gcry_sexp_t copy_crypto_resource(AsymmetricKey* crypto_resource_wrapped)
  *
  * @return true if succeeds otherwise false
  */
-void Cryptic::triple_ed_dh(PublicKey* peer_ephemeral_key, PublicKey* peer_long_term_key, AsymmetricKeyPair* my_long_term_key, bool peer_is_first, HashBlock* teddh_token)
+void Cryptic::triple_ed_dh(PublicKey peer_ephemeral_key, PublicKey peer_long_term_key, AsymmetricKeyPair my_long_term_key, bool peer_is_first, HashBlock* teddh_token)
 {
   gcry_error_t err = 0;
   bool failed = true;
@@ -446,9 +457,9 @@ void Cryptic::triple_ed_dh(PublicKey* peer_ephemeral_key, PublicKey* peer_long_t
   uint8_t* feed_to_hash_buffer = NULL;
   std::string token_concat;
 
-  gcry_sexp_t my_long_term_secret_scalar = my_long_term_key->scalar->unwrap();
+  gcry_sexp_t my_long_term_secret_scalar = my_long_term_key.scalar.unwrap();
   gcry_sexp_t my_ephemeral_secret_scalar = gcry_sexp_nth(
-    gcry_sexp_find_token(ephemeral_key->unwrap(), "a", 0),
+    gcry_sexp_find_token(ephemeral_key.unwrap(), "a", 0),
     1);
 
   if (!(my_long_term_secret_scalar && my_ephemeral_secret_scalar)) {
@@ -460,7 +471,7 @@ void Cryptic::triple_ed_dh(PublicKey* peer_ephemeral_key, PublicKey* peer_long_t
   //bAP
   err = gcry_pk_encrypt(triple_dh_sexp + (peer_is_first ? 0 : 1),
                         my_ephemeral_secret_scalar,
-                        peer_long_term_key->unwrap());
+                        peer_long_term_key.unwrap());
 
   if ( err ) {
     logger.error("teddh: failed to compute dh token\n", __FUNCTION__);
@@ -474,7 +485,7 @@ void Cryptic::triple_ed_dh(PublicKey* peer_ephemeral_key, PublicKey* peer_long_t
   //BaP
   err = gcry_pk_encrypt(triple_dh_sexp + (peer_is_first ? 1 : 0),
                         my_long_term_secret_scalar,
-                        peer_ephemeral_key->unwrap());
+                        peer_ephemeral_key.unwrap());
   if ( err ) {
     logger.error("teddh: failed to compute dh token\n", __FUNCTION__);
     logger.error(std::string("Failure: ")+
@@ -486,7 +497,7 @@ void Cryptic::triple_ed_dh(PublicKey* peer_ephemeral_key, PublicKey* peer_long_t
   //abP
   err = gcry_pk_encrypt(triple_dh_sexp+2,
                         my_ephemeral_secret_scalar,
-                        peer_ephemeral_key->unwrap());
+                        peer_ephemeral_key.unwrap());
 
   if ( err ) {
     logger.error("teddh: failed to compute dh token\n", __FUNCTION__);
@@ -557,7 +568,7 @@ void Cryptic::sign(unsigned char **sigp, size_t *siglenp,
   }
 
   
-  err = gcry_pk_sign(&sigs, plain_sexp, ephemeral_prv_key->unwrap());
+  err = gcry_pk_sign(&sigs, plain_sexp, ephemeral_prv_key.unwrap());
 
   if ( err ) {
     gcry_sexp_release(plain_sexp);
@@ -618,7 +629,7 @@ void Cryptic::sign(unsigned char **sigp, size_t *siglenp,
 
 bool Cryptic::verify(std::string plain_text,
                              const unsigned char *sigbuf,
-                             PublicKey* signer_ephemeral_pub_key) {
+                             PublicKey signer_ephemeral_pub_key) {
   gcry_error_t err;
   gcry_sexp_t datas = nullptr, sigs = nullptr;
   static const uint32_t nr = 32, ns = 32;
@@ -645,7 +656,7 @@ bool Cryptic::verify(std::string plain_text,
     goto err;
   }
 
-  err = gcry_pk_verify(sigs, datas, signer_ephemeral_pub_key->unwrap());
+  err = gcry_pk_verify(sigs, datas, signer_ephemeral_pub_key.unwrap());
 
   gcry_sexp_release(sigs);
   gcry_sexp_release(datas);
@@ -763,10 +774,6 @@ std::string Cryptic::Decrypt(std::string encrypted_text) {
 
 Cryptic::~Cryptic()
 {
-  logger.info("Deleting crytpic keys");
-  delete ephemeral_key;
-  delete ephemeral_pub_key;
-  delete ephemeral_prv_key;
 }
 
 } // namespace np1sec
