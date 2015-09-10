@@ -120,17 +120,7 @@ static void _delete_sexp(gcry_sexp_t* sexp)
 {
   logger.info("Releasing s-expression");
   gcry_sexp_release(*sexp);
-  delete sexp;
-}
-
-/**
- * Don't do anything when a shared_ptr<gcry_sexp_t> goes out of scope.
- * Not to be called directly.
- * @param {gcry_sexp_t*} sexp - A pointer to the s-exp passed by the shared_ptr deconstructor
- */
-static void _do_nothing(gcry_sexp_t* sexp)
-{
-  sexp = sexp; // To prevent the compiler from complaining
+  sexp = nullptr;
 }
 
 /**
@@ -147,8 +137,17 @@ AsymmetricKey::AsymmetricKey(gcry_sexp_t data)
 }
 
 /**
- * Default contructor for the AsymmetricKey class that marks the data
- * as unusable.
+ * Deallocator for the shared_ptr containing no actual sexp value
+ * that does nothing.
+ */
+static void _do_nothing(gcry_sexp_t* sexp)
+{
+  sexp = sexp;
+}
+
+/**
+ * Default constructor for AsymmetricKey that sets the data stored
+ * to a nullptr to signal that it's not suited for use.
  */
 AsymmetricKey::AsymmetricKey()
 {

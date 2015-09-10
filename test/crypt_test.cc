@@ -105,15 +105,13 @@ TEST_F(CryptTest, test_sign_verify) {
 TEST_F(CryptTest, test_teddh_test) {
   logger.silly("CryptTest/test_teddh_test");
 
-  AsymmetricKeyPair* alice_keys = generate_key_pair();
-  AsymmetricKeyPair* bob_keys = generate_key_pair();
+  AsymmetricKeyPair alice_keys = generate_key_pair();
+  AsymmetricKeyPair bob_keys = generate_key_pair();
   
-  ASSERT_TRUE(alice_keys != nullptr);
-  ASSERT_TRUE(bob_keys != nullptr);
-  ASSERT_TRUE(alice_keys->public_key != nullptr);
-  ASSERT_TRUE(alice_keys->private_key != nullptr);
-  ASSERT_TRUE(bob_keys->public_key != nullptr);
-  ASSERT_TRUE(bob_keys->private_key != nullptr);
+  ASSERT_TRUE(alice_keys.public_key.unwrap() != nullptr);
+  ASSERT_TRUE(alice_keys.private_key.unwrap() != nullptr);
+  ASSERT_TRUE(bob_keys.public_key.unwrap() != nullptr);
+  ASSERT_TRUE(bob_keys.private_key.unwrap() != nullptr);
  
   Cryptic alice_crypt, bob_crypt;
   alice_crypt.init(); //This is either stupid or have stupid name
@@ -127,7 +125,7 @@ TEST_F(CryptTest, test_teddh_test) {
   ASSERT_NO_THROW(
     alice_crypt.triple_ed_dh(
       bob_crypt.get_ephemeral_pub_key(),
-      bob_keys->public_key,
+      bob_keys.public_key,
       alice_keys,
       bob_is_first,
       &teddh_alice_bob));
@@ -135,7 +133,7 @@ TEST_F(CryptTest, test_teddh_test) {
   ASSERT_NO_THROW(
     bob_crypt.triple_ed_dh(
       alice_crypt.get_ephemeral_pub_key(),
-      alice_keys->public_key,
+      alice_keys.public_key,
       bob_keys,
       alice_is_first,
       &teddh_bob_alice));
@@ -143,9 +141,6 @@ TEST_F(CryptTest, test_teddh_test) {
   for(unsigned int i = 0; i < sizeof(HashBlock); i++) {
     ASSERT_EQ(teddh_alice_bob[i], teddh_bob_alice[i]);
   }
-
-  delete alice_keys;
-  delete bob_keys;
 }
 
 /**
