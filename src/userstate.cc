@@ -130,6 +130,7 @@ bool np1secUserState::join_room(std::string room_name,
   //if the room is not made, we make it.
   if (chatrooms.find(room_name) == chatrooms.end()) {
     //room creation triger joining
+    logger.info("Did not find room to join. Creating new room.");
     try {
       chatrooms.emplace(room_name, np1secRoom(room_name, this, participants_in_the_room));
     } catch(std::exception& e) {
@@ -143,6 +144,7 @@ bool np1secUserState::join_room(std::string room_name,
     //join 
     //if (!chatrooms[room_name].join()) {
     //TODO:garbage collector for the room?
+    logger.info("Trying to rejoin room");
     try { //try rejoining
       chatrooms[room_name].try_rejoin();      
     }
