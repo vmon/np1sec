@@ -120,6 +120,7 @@ static void _delete_sexp(gcry_sexp_t* sexp)
 {
   logger.info("Releasing s-expression");
   gcry_sexp_release(*sexp);
+  delete sexp;
   sexp = nullptr;
 }
 
@@ -438,7 +439,11 @@ gcry_sexp_t copy_crypto_resource(AsymmetricKey crypto_resource_wrapped)
  *
  * @return true if succeeds otherwise false
  */
-void Cryptic::triple_ed_dh(PublicKey peer_ephemeral_key, PublicKey peer_long_term_key, AsymmetricKeyPair my_long_term_key, bool peer_is_first, HashBlock* teddh_token)
+void Cryptic::triple_ed_dh(PublicKey peer_ephemeral_key,
+                           PublicKey peer_long_term_key,
+                           AsymmetricKeyPair my_long_term_key,
+                           bool peer_is_first,
+                           HashBlock* teddh_token)
 {
   gcry_error_t err = 0;
   bool failed = true;
@@ -453,6 +458,7 @@ void Cryptic::triple_ed_dh(PublicKey peer_ephemeral_key, PublicKey peer_long_ter
   //initiating the to be encrypted 1
 
   gcry_sexp_t triple_dh_sexp[3] = {};
+  
   uint8_t* feed_to_hash_buffer = NULL;
   std::string token_concat;
 
