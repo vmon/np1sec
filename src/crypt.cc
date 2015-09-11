@@ -364,6 +364,7 @@ np1secAsymmetricKey reconstruct_public_key_sexp(const std::string pub_key_block)
 
 void release_crypto_resource(gcry_sexp_t crypto_resource)
 {
+  return;
   if (crypto_resource)
     gcry_sexp_release(crypto_resource);
 }
@@ -418,8 +419,23 @@ gcry_sexp_t copy_crypto_resource(AsymmetricKey crypto_resource_wrapped)
 
   return copied_resource;
 
-};
+}
+  
+gcry_sexp_t  AsymmetricKey::unwrap() {
+  gcry_sexp_t copied_resource;
+  gcry_error_t err = gcry_sexp_build(&copied_resource,
+                                     NULL,
+                                     "%S",
+                                     *(data_ptr.get()));
+  if (err) {
+    logger.error(std::string("failed to copy crypto resource: ") + gcry_strsource(err)+"/" + gcry_strerror(err), __FUNCTION__);
+    throw np1secCryptoException();
+    return nullptr;
+  }
 
+  return copied_resource;
+
+}
 /**
  * Given the peer's long term and ephemeral public key AP and ap, and ours 
  * BP, bP, all points on ed25519 curve, this 

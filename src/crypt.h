@@ -118,7 +118,7 @@ class AsymmetricKey
   AsymmetricKey(gcry_sexp_t data);
   AsymmetricKey();
 
-  gcry_sexp_t unwrap() { return *(data_ptr.get()); }
+  gcry_sexp_t unwrap(); // { copy_crypto_resour *(data_ptr.get()); }
 
   private:
   std::shared_ptr<gcry_sexp_t> data_ptr;
