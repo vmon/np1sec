@@ -496,6 +496,11 @@ int main(int argc, char* argv[])
     purple_account_set_enabled(account, UI_ID, TRUE);
 
     PurpleSavedStatus* status = purple_savedstatus_new(NULL, PURPLE_STATUS_AVAILABLE);
+    if (status == NULL) {
+        fprintf(stderr, "Failed to connect to the server.\n");
+        np1sec::logger.debug("Failed to connect to the server.");
+        abort();
+    }
     purple_savedstatus_activate(status);
       
     // user_state need to be sent in order to be available to call backs

@@ -2,25 +2,25 @@
 # Run "./configure --help" for details.
 
 PREFIX=/usr/local
-SYSCONFDIR=/etc/prosody
+SYSCONFDIR=/usr/local/etc/prosody
 LIBDIR=/usr/local/lib
-DATADIR=/var/lib/prosody
+DATADIR=/usr/local/var/lib/prosody
 LUA_SUFFIX=5.1
 LUA_DIR=/usr
 LUA_INCDIR=/usr/include/lua5.1
-LUA_LIBDIR=/usr/local/lib
+LUA_LIBDIR=/usr/lib
 LUA_BINDIR=/usr/bin
 REQUIRE_CONFIG=
 IDN_LIB=idn
 IDNA_LIBS=-lidn
 OPENSSL_LIBS=-lcrypto
-CFLAGS= -fPIC -Wall -Wextra -D_GNU_SOURCE
-LDFLAGS= -shared
+CFLAGS=-fPIC -Wall -D_GNU_SOURCE
+LDFLAGS=-shared
 CC=gcc
 CXX=g++
 LD=gcc
 RUNWITH=lua5.1
-EXCERTS=
+EXCERTS=yes
 RANDOM=
 RANDOM_LIBS=
 
