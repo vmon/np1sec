@@ -1,30 +1,11 @@
-ACLOCAL_AMFLAGS = -I m4
+AUTOMAKE_OPTIONS = foreign subdir-objects
+SUBDIRS = src test test/jabberite
 
-AM_CPPFLAGS = -I. -I$(srcdir)/src \
-	-I$(srcdir)/contrib/gtest/include \
-	$(LIBGCRYPT_CFLAGS) \
-	$(LIBEVENT_CFLAGS)
+# noinst_LTLIBRARIES = contrib/gtest/lib/libgtest.la
 
-noinst_LTLIBRARIES =
-noinst_PROGRAMS =
+# contrib_gtest_lib_libgtest_la_SOURCES = \
+# 	contrib/gtest/src/gtest-all.cc
 
-TESTS =
-
-lib_LTLIBRARIES = libnp1sec.la
-
-libnp1sec_la_SOURCES = \
-	src/crypt.cc \
-	src/logger.cc \
-	src/base64.cc \
-	src/message.cc \
-	src/participant.cc \
-	src/session.cc \
-	src/room.cc \
-	src/userstate.cc
-
-libnp1sec_la_LIBADD = \
-	$(LIBGCRYPT_LIBS) \
-	$(LIBEVENT_LIBS)
-
-include test/Makefile.inc
-include Makefile.am.lint
+# contrib_gtest_lib_libgtest_la_CPPFLAGS = \
+# 	-I$(top_srcdir)/${GTEST_BASE} \
+# 	-I$(top_srcdir)/${GTEST_INCLUDE}

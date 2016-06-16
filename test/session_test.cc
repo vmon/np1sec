@@ -91,6 +91,68 @@ class SessionTest : public ::testing::Test
 
  }*/
 
+TEST_F(SessionTest, test_concurrent_join_redundant)
+{
+    // return;
+    // first we need a username and we use it
+    // to sign in the room
+    string alice = "alice";
+    AppOps alice_mockops = *mockops;
+    std::pair<ChatMocker*, string> mock_aux_alice_data(&mock_server, alice);
+    alice_mockops.bare_sender_data = static_cast<void*>(&mock_aux_alice_data);
+    UserState* alice_state = new UserState(alice, &alice_mockops);
+    alice_state->init();
+
+    AppOps bob_mockops = *mockops;
+    string bob = "bob";
+    std::pair<ChatMocker*, string> mock_aux_bob_data(&mock_server, bob);
+    bob_mockops.bare_sender_data = static_cast<void*>(&mock_aux_bob_data);
+    UserState* bob_state = new UserState(bob, &bob_mockops);
+    // They can use the same mock up as they are using the same mock server
+    bob_state->init();
+
+    AppOps charlie_mockops = *mockops;
+    string charlie = "charlie";
+    std::pair<ChatMocker*, string> mock_aux_charlie_data(&mock_server, charlie);
+    charlie_mockops.bare_sender_data = static_cast<void*>(&mock_aux_charlie_data);
+    UserState* charlie_state = new UserState(charlie, &charlie_mockops);
+    charlie_state->init();
+
+    pair<UserState*, ChatMocker*> alice_server_state(alice_state, &mock_server);
+    pair<UserState*, ChatMocker*> bob_server_state(bob_state, &mock_server);
+    pair<UserState*, ChatMocker*> charlie_server_state(charlie_state, &mock_server);
+
+    // everybody signs in
+    // alice
+    mock_server.sign_in(alice, chat_mocker_np1sec_plugin_receive_handler, static_cast<void*>(&alice_server_state));
+    // bob
+    mock_server.sign_in(bob, chat_mocker_np1sec_plugin_receive_handler, static_cast<void*>(&bob_server_state));
+    // charlie
+    mock_server.sign_in(charlie, chat_mocker_np1sec_plugin_receive_handler, static_cast<void*>(&charlie_server_state));
+
+    // alice joins first
+    mock_server.join(mock_room_name, alice_state->user_nick());
+
+    // receive your share and own confirmation
+    mock_server.receive();
+
+    // then bob joins
+    mock_server.join(mock_room_name, bob_state->user_nick());
+    // then charlie joins
+    mock_server.join(mock_room_name, charlie_state->user_nick());
+
+    // receive the join requests and start reations
+    mock_server.receive();
+
+    chat_mocker_np1sec_plugin_send(mock_room_name, "Happy concurrent join!", &charlie_server_state);
+
+    mock_server.receive();
+
+    delete alice_state;
+    delete bob_state;
+    delete charlie_state;
+}
+
 TEST_F(SessionTest, test_init)
 {
     // first we need a username and we use it
@@ -351,41 +413,41 @@ TEST_F(SessionTest, test_three_party_chat)
     delete charlie_state;
 }
 
-TEST_F(SessionTest, test_ten_party_chat)
-{
-    // return;
-    // first we need a username and we use it
-    // to sign in the room
-    const unsigned int total_no_participants = 10;
+// TEST_F(SessionTest, test_ten_party_chat)
+// {
+//     // return;
+//     // first we need a username and we use it
+//     // to sign in the room
+//     const unsigned int total_no_participants = 10;
 
-    string participant_base_name = "p";
-    AppOps participant_mockops[total_no_participants];
-    std::pair<ChatMocker*, string> mock_aux_participant_data[total_no_participants];
-    UserState* participant_state[total_no_participants];
-    pair<UserState*, ChatMocker*> participant_server_state[total_no_participants];
+//     string participant_base_name = "p";
+//     AppOps participant_mockops[total_no_participants];
+//     std::pair<ChatMocker*, string> mock_aux_participant_data[total_no_participants];
+//     UserState* participant_state[total_no_participants];
+//     pair<UserState*, ChatMocker*> participant_server_state[total_no_participants];
 
-    for (unsigned int i = 0; i < total_no_participants; i++) {
-        std::string cur_participant_name = participant_base_name + std::to_string(i);
-        participant_mockops[i] = *mockops;
-        mock_aux_participant_data[i] = std::pair<ChatMocker*, string>(&mock_server, cur_participant_name);
-        participant_mockops[i].bare_sender_data = static_cast<void*>(&mock_aux_participant_data[i]);
-        ;
-        participant_state[i] = new UserState(cur_participant_name, &participant_mockops[i]);
-        participant_state[i]->init();
+//     for (unsigned int i = 0; i < total_no_participants; i++) {
+//         std::string cur_participant_name = participant_base_name + std::to_string(i);
+//         participant_mockops[i] = *mockops;
+//         mock_aux_participant_data[i] = std::pair<ChatMocker*, string>(&mock_server, cur_participant_name);
+//         participant_mockops[i].bare_sender_data = static_cast<void*>(&mock_aux_participant_data[i]);
+//         ;
+//         participant_state[i] = new UserState(cur_participant_name, &participant_mockops[i]);
+//         participant_state[i]->init();
 
-        participant_server_state[i] = pair<UserState*, ChatMocker*>(participant_state[i], &mock_server);
+//         participant_server_state[i] = pair<UserState*, ChatMocker*>(participant_state[i], &mock_server);
 
-        mock_server.sign_in(cur_participant_name, chat_mocker_np1sec_plugin_receive_handler,
-                            static_cast<void*>(&participant_server_state[i]));
+//         mock_server.sign_in(cur_participant_name, chat_mocker_np1sec_plugin_receive_handler,
+//                             static_cast<void*>(&participant_server_state[i]));
 
-        mock_server.join(mock_room_name, participant_state[i]->user_nick());
+//         mock_server.join(mock_room_name, participant_state[i]->user_nick());
 
-        mock_server.receive();
-    }
+//         mock_server.receive();
+//     }
 
-    for (unsigned i = 0; i < total_no_participants; i++)
-        delete participant_state[i];
-}
+//     for (unsigned i = 0; i < total_no_participants; i++)
+//         delete participant_state[i];
+// }
 
 TEST_F(SessionTest, test_solitary_leave)
 {

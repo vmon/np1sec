@@ -249,9 +249,12 @@ void Room::receive_handler(Message received_message)
                             cur_session.second->nobody_confirmed()) {
                             logger.debug("somebody else is confirming session, need to rejoin", __FUNCTION__,
                                          user_state->myself->nickname);
-                            cur_session.second->commit_suicide(); // we know the action is either death or nothing in
+                            //cur_session.second->commit_suicide(); // we know the action is either death or nothing in
                                                                   // both case we don't need to do anything
                         }
+
+                    logger.debug("somebody joined/left, before we can join, starting from the beginning", __FUNCTION__);
+                    try_rejoin(); // it helps because although the active session
 
                 } // otherwise that message doesn't concern us (the entrance for setting up session id is
                 // PARTICIPANTS_INFO
@@ -322,8 +325,33 @@ void Room::receive_handler(Message received_message)
         if (action_to_take.action_type == RoomAction::NEW_SESSION ||
             action_to_take.action_type ==
                 RoomAction::NEW_PRIORITY_SESSION) { // TODO:: we need to delete a dead session probably
-            session_universe.insert(std::pair<std::string, Session*>(
-                action_to_take.bred_session->my_session_id().get_as_stringbuff(), action_to_take.bred_session));
+          auto premature_session = session_universe.find(action_to_take.bred_session->my_session_id().get_as_stringbuff());
+          if (premature_session != session_universe.end()) {
+            switch (premature_session->second->get_state())
+              {
+              case Session::RE_SHARED:
+                //just go with current session just resend the participant info message
+                delete action_to_take.bred_session;
+                action_to_take.bred_session = premature_session->second;
+                logger.debug("a room already in state of: " + logger.state_to_text[premature_session->second->get_state()] + " exists.");
+                break;
+                
+              case Session::DEAD:
+                delete premature_session->second; //We are replacinig it with new session
+                session_universe.erase(premature_session);
+                break;
+
+              default:
+                logger.debug("a room already in state of: " + logger.state_to_text[premature_session->second->get_state()] + " exists. killing it in favor of newly generated session");
+                premature_session->second->commit_suicide();
+                delete premature_session->second; //We are replacinig it with new session
+                session_universe.erase(premature_session);
+              }
+            
+          }
+          session_universe.insert(std::pair<std::string, Session*>(
+                                                                  action_to_take.bred_session->my_session_id().get_as_stringbuff(), action_to_take.bred_session));
+          
         }
 
         if (action_to_take.action_type == RoomAction::NEW_PRIORITY_SESSION ||

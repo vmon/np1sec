@@ -57,5 +57,8 @@ AC_CHECK_LIB([pthread], [pthread_create], [
 	AC_SUBST(PTHREAD)
 ], [])
 
-AC_CONFIG_FILES([Makefile])
-AC_OUTPUT
+AC_CONFIG_SRCDIR([src/userstate.cc])
+#AC_CONFIG_FILES([Makefile])
+#AC_OUTPUT
+#AC_CONFIG_FILES([Makefile])
+AC_OUTPUT(Makefile src/Makefile test/Makefile test/jabberite/Makefile)

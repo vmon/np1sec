@@ -426,9 +426,12 @@ bool Session::everybody_authenticated_and_contributed()
 
 bool Session::everybody_confirmed()
 {
-    for (std::vector<bool>::iterator it = confirmed_peers.begin(); it != confirmed_peers.end(); it++)
-        if (!(*it))
-            return false;
+  int i = 0;
+  for (std::vector<bool>::iterator it = confirmed_peers.begin(); it != confirmed_peers.end(); it++, i++)
+    if (!(*it)) {
+      logger.debug("has not confirmed", __FUNCTION__, participants[peers[i]].id.nickname);
+      return false;
+    }
 
     return true;
 }
@@ -715,6 +718,9 @@ Session::StateAndAction Session::init_a_session_with_new_user(Message received_m
         // a session object and not tell the whole world about it.
     } else {
         logger.warn(joiner.participant_id.nickname + " can't join the room twice");
+        send_view_auth_and_share(joiner.participant_id.nickname);
+        //we need to re-broadcast the participant info message in case
+        //they missed it
         throw DoubleJoinException();
     }
 
@@ -955,7 +961,7 @@ Session::StateAndAction Session::mark_confirmed_and_may_move_session(Message rec
     }
 
     confirmed_peers[participants[received_message.sender_nick].index] = true;
-
+    
     if (everybody_confirmed()) {
         // kill the rejoin timer
         if (rejoin_timer)

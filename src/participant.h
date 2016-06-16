@@ -107,7 +107,7 @@ struct ParticipantId {
     ~ParticipantId()
     {
       secure_wipe(fingerprint, c_fingerprint_length);
-      logger.debug("Wiping fingerprint from ParticipantID");
+      //logger.debug("Wiping fingerprint from ParticipantID");
     }
 
     /**
@@ -347,8 +347,8 @@ class Participant
         //logger.debug("Wiped ephemeral_key from Participant");
         //logger.debug("Wiped raw_ephemeral_key from Participant");
         //logger.debug("Wiped cur_keyshare from Participant");
-        logger.debug("Wiped future_raw_ephemeral_key from Participant");
-        logger.debug("Wiped p2p_key from Participant");
+        //logger.debug("Wiped future_raw_ephemeral_key from Participant");
+        //logger.debug("Wiped p2p_key from Participant");
     }
 };
 
