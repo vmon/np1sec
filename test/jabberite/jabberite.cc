@@ -41,6 +41,8 @@ extern "C" {
 #include "jabberite_np1sec_plugin.h"
 #include "interface.h"
 
+#include "ec_api.h"
+
 #define CUSTOM_USER_DIRECTORY "/tmp/test_user"
 #define CUSTOM_PLUGIN_PATH ""
 #define PLUGIN_SAVE_PREF "/tmp/test_client/plugins/saved"
@@ -57,15 +59,18 @@ void write_conv(PurpleConversation* conv, const char* who, const char* alias, co
     UNUSED(conv);
     UNUSED(flags);
     UNUSED(mtime);
-    const char* name = NULL;
-    if (alias && *alias)
-        name = alias;
-    else if (who && *who)
-        name = who;
-    printf("%s> %s\n", name, message);
+    UNUSED(message);
+    UNUSED(alias);
+    UNUSED(who);
+    // const char* name = NULL;
+    // if (alias && *alias)
+    //     name = alias;
+    // else if (who && *who)
+    //     name = who;
+    //printf("%s> %s\n", name, message);
 }
 
-PurpleConversationUiOps conv_uiops = {NULL, NULL, NULL, NULL, write_conv, NULL, NULL, NULL, NULL, NULL,
+PurpleConversationUiOps conv_uiops = {NULL, NULL, NULL, NULL, NULL/*write_conv*/, NULL, NULL, NULL, NULL, NULL,
                                       NULL, NULL, NULL, NULL, NULL,       NULL, NULL, NULL, NULL};
 
 void ui_init(void) { purple_conversations_set_ui_ops(&conv_uiops); }
@@ -401,7 +406,7 @@ int main(int argc, char* argv[])
 
     //Dealing with command line option
     /* A string listing valid short options letters.*/
-    const char* const short_options = "ha:p:s:r:";
+    const char* const short_options = "ha:p:s:r:e:";
     /* An array describing valid long options. */
     const struct option long_options[] = {
       { "help", 0, NULL, 'h' },
@@ -580,11 +585,15 @@ int main(int argc, char* argv[])
       name.sun_family = AF_LOCAL;
       strcpy (name.sun_path, socket_name);
       bind (socket_fd, (const sockaddr*)&name, SUN_LEN (&name));
+      listen(socket_fd, 1);
 
     }
     
     GIOChannel* io = g_io_channel_unix_new(STDIN_FILENO);
+    GIOChannel* ec_api_io = g_io_channel_unix_new(socket_fd);
+
     g_io_add_watch(io, G_IO_IN, io_callback, &user_state);
+    g_io_add_watch(ec_api_io, G_IO_IN, EchoChamberAPI::ec_api_io_callback, &user_state);
     g_main_loop_run(loop);
 
     delete[] user_name;
