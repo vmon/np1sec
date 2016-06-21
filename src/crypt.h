@@ -87,7 +87,7 @@ int compare_hash(const HashBlock rhs, const HashBlock lhs);
 
 std::string hash_to_string_buff(const HashBlock hash_block);
 
-const uint8_t* strbuff_to_hash(std::string& hash_block_buffer);
+const uint8_t* strbuff_to_hash(const std::string& hash_block_buffer);
 
 PublicKey extract_public_key(const AsymmetricKey complete_key);
 
@@ -137,10 +137,27 @@ class Cryptic
      */
     Cryptic(const Cryptic& rhs)
     {
-        ephemeral_key = copy_crypto_resource(rhs.ephemeral_key);
-        ephemeral_pub_key = copy_crypto_resource(rhs.ephemeral_pub_key);
-        ephemeral_prv_key = copy_crypto_resource(rhs.ephemeral_prv_key);
-        set_session_key(rhs.session_key);
+      ephemeral_key = copy_crypto_resource(rhs.ephemeral_key);
+      ephemeral_pub_key = copy_crypto_resource(rhs.ephemeral_pub_key);
+      ephemeral_prv_key = copy_crypto_resource(rhs.ephemeral_prv_key);
+      set_session_key(rhs.session_key);
+    }
+
+    /**
+     * Copy constructor
+     */
+    Cryptic& operator=(const Cryptic& rhs)
+    {
+      release_crypto_resource(ephemeral_key);
+      release_crypto_resource(ephemeral_pub_key);
+      release_crypto_resource(ephemeral_prv_key);
+      
+      ephemeral_key = copy_crypto_resource(rhs.ephemeral_key);
+      ephemeral_pub_key = copy_crypto_resource(rhs.ephemeral_pub_key);
+      ephemeral_prv_key = copy_crypto_resource(rhs.ephemeral_prv_key);
+      set_session_key(rhs.session_key);
+
+      return *this;
     }
 
     /**

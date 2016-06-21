@@ -67,6 +67,10 @@ Logger::Logger(log_level_t threshold)
     log_to_stderr = true;
     log_to_file = false;
     log_filename = "";
+
+    log_ts_base = {0, 0};
+    //gettimeofday(&log_ts_base, 0);
+
 }
 
 // Standard destructor
@@ -111,6 +115,7 @@ void Logger::log(log_level_t level, std::string msg, std::string function_name, 
     msg = (user_nick.empty()) ? msg : user_nick + ": " + msg;
     msg = (function_name.empty()) ? msg : function_name + ": " + msg;
 
+
     switch (level) {
     case SILLY:
         msg = "\033[1;35;47m[SILLY] " + msg + "\033[0m";
@@ -134,6 +139,10 @@ void Logger::log(log_level_t level, std::string msg, std::string function_name, 
         msg = "\033[91;40m[ABORT] " + msg + "\033[0m";
         break;
     }
+
+    //time stamp
+    msg = std::to_string(log_get_timestamp()) + ": " + msg;
+
     if (log_to_stderr) {
         std::cerr << msg << std::endl;
     }
@@ -184,6 +193,16 @@ void Logger::assert_or_die(bool expr, std::string failure_message, std::string f
 {
     if (!expr)
         abort(failure_message, function_name, user_nick);
+}
+
+/** Get a timestamp, as a floating-point number of seconds. */
+double
+Logger::log_get_timestamp()
+{
+  struct timeval now, delta;
+  gettimeofday(&now, 0);
+  timeval_subtract(&now, &log_ts_base, &delta);
+  return delta.tv_sec + double(delta.tv_usec) / 1e6;
 }
 
 } // namespace np1sec

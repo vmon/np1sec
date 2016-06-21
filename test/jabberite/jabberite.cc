@@ -587,13 +587,38 @@ int main(int argc, char* argv[])
       bind (socket_fd, (const sockaddr*)&name, SUN_LEN (&name));
       listen(socket_fd, 1);
 
+      // do {
+      //   struct sockaddr_un client_name;
+      //   socklen_t client_name_len;
+      //   int client_socket_fd;
+      //     /* Accept a connection. */
+      //   client_socket_fd = accept (socket_fd, (sockaddr*)&client_name, &client_name_len);
+      //     /* Handle the connection. */
+      // int length;
+      // char* text;
+     
+      // /* First, read the length of the text message from the socket.
+      //    read returns zero, the client closed the connection. */
+      // if (read (client_socket_fd, &length, sizeof (length)) != 0) {
+      //   /* Allocate a buffer to hold the text. */
+      //   text = (char*) malloc (length);
+      // /* Read the text itself, and print it. */
+      //   read (client_socket_fd, text, length);
+      //   printf ("%s\n", text);
+      // }
+      // /* Close our end of the connection. */
+      // close (client_socket_fd);
+      // }
+      // while (!false);
+
+      GIOChannel* ec_api_io = g_io_channel_unix_new(socket_fd);
+      g_io_add_watch(ec_api_io, G_IO_IN, EchoChamberAPI::ec_api_io_callback, &user_state);
+      
     }
     
     GIOChannel* io = g_io_channel_unix_new(STDIN_FILENO);
-    GIOChannel* ec_api_io = g_io_channel_unix_new(socket_fd);
 
     g_io_add_watch(io, G_IO_IN, io_callback, &user_state);
-    g_io_add_watch(ec_api_io, G_IO_IN, EchoChamberAPI::ec_api_io_callback, &user_state);
     g_main_loop_run(loop);
 
     delete[] user_name;

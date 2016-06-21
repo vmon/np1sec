@@ -184,8 +184,7 @@ Session::Session(SessionConceiverCondition conceiver, UserState* us, std::string
 {
     engrave_state_machine_graph();
 
-    logger.info("constructing new session for room " + room_name + " with " + std::to_string(participants.size()) +
-                    " participants",
+    logger.info("constructing new session for room " + room_name,
                 __FUNCTION__, myself.nickname);
 
     // Joiner is the only one who can't compute session id at creation so we
@@ -200,8 +199,24 @@ Session::Session(SessionConceiverCondition conceiver, UserState* us, std::string
         my_state = JOIN_REQUESTED;
 
         populate_participants_and_peers(conceiving_message->get_session_view());
+        
+        logger.info("constructing new session for room " + room_name + " as a joiner with " + std::to_string(participants.size()) +
+                    " participants",
+                __FUNCTION__, myself.nickname);
 
+    } else if (conceiver == STALER) {
+      logger.info("constructing a stale session for room " + room_name + " as a staler with " + std::to_string(participants.size()) +
+                  " participants",
+                  __FUNCTION__, myself.nickname);
+
+        populate_peers_from_participants();
+        my_state = STALE;
+      
     } else {
+      logger.info("constructing new session for room " + room_name + " with " + std::to_string(participants.size()) +
+                  " participants",
+                  __FUNCTION__, myself.nickname);
+
         switch (conceiver) {
         case CREATOR:
             logger.assert_or_die(participants.size() == 1, "initiated a room by more than a one participants",
@@ -278,11 +293,14 @@ Session::Session(SessionConceiverCondition conceiver, UserState* us, std::string
         send_view_auth_and_share(joiner_id);
     } else if (conceiver == PEER || conceiver == STAYER) // just anything else
         send_new_share_message();
+    else if (conceiver == STALER)
+      logger.debug("starting a stale session. sending nothing");
     else
-        logger.abort("invalid session conceiver", __FUNCTION__, myself.nickname);
+      logger.abort("invalid session conceiver", __FUNCTION__, myself.nickname);
 
     logger.info("session constructed with FSM new state: " + logger.state_to_text[my_state], __FUNCTION__,
                 myself.nickname);
+    logger.debug("new session fingerprint: " + session_view_fingerprint(), __FUNCTION__, myself.nickname);
 }
 
 /**
@@ -315,6 +333,7 @@ void Session::setup_session_view(Message session_view_message)
 void Session::compute_session_confirmation()
 {
     std::string to_be_hashed = hash_to_string_buff(session_key);
+    logger.debug("session key:" + std::string((char*)session_key));
     to_be_hashed += myself.nickname;
 
     hash(to_be_hashed, session_confirmation);
@@ -346,7 +365,8 @@ bool Session::validate_session_confirmation(Message confirmation_message)
     hash(to_be_hashed, expected_hash);
 
     return !(compare_hash(
-        expected_hash, reinterpret_cast<const uint8_t*>(confirmation_message.session_key_confirmation.c_str())));
+      expected_hash, reinterpret_cast<const uint8_t*>(confirmation_message.session_key_confirmation.c_str())));
+    
 }
 
 /**
@@ -418,8 +438,10 @@ void Session::group_dec()
 bool Session::everybody_authenticated_and_contributed()
 {
     for (ParticipantMap::iterator it = participants.begin(); it != participants.end(); it++)
-        if (!it->second.authenticated || !it->second.key_share_contributed)
+      if (!it->second.authenticated || !it->second.key_share_contributed) {
+        logger.debug(it->second.id.nickname + " has not authed/contributed yet", __FUNCTION__, myself.nickname);
             return false;
+      }
 
     return true;
 }
@@ -429,7 +451,7 @@ bool Session::everybody_confirmed()
   int i = 0;
   for (std::vector<bool>::iterator it = confirmed_peers.begin(); it != confirmed_peers.end(); it++, i++)
     if (!(*it)) {
-      logger.debug("has not confirmed", __FUNCTION__, participants[peers[i]].id.nickname);
+      logger.debug(participants[peers[i]].id.nickname + " has not confirmed yet.", __FUNCTION__, myself.nickname);
       return false;
     }
 
@@ -706,6 +728,7 @@ Session::StateAndAction Session::init_a_session_with_new_user(Message received_m
         logger.info("creating a session with new participant " + joiner.participant_id.nickname);
         live_participants.insert(
             std::pair<std::string, Participant>(joiner.participant_id.nickname, Participant(joiner)));
+        logger.assert_or_die(future_cryptic_gaurd, "you can't init a new session before you sort out your future cryptic");
 
         Session* new_child_session = new Session(
             ACCEPTOR, us, room_name, &future_cryptic, live_participants, future_participants(), &received_message);
@@ -718,7 +741,70 @@ Session::StateAndAction Session::init_a_session_with_new_user(Message received_m
         // a session object and not tell the whole world about it.
     } else {
         logger.warn(joiner.participant_id.nickname + " can't join the room twice");
-        send_view_auth_and_share(joiner.participant_id.nickname);
+        //send_view_auth_and_share(joiner.participant_id.nickname);
+        //we need to re-broadcast the participant info message in case
+        //they missed it
+        //not really refreshing stale session will send the correct one
+        //again
+        throw DoubleJoinException();
+    }
+
+    // TODO: this is incomplete, you need to report your session
+    // to the room. more logically the room just need to request the
+    // creation of the room. so just return the list of participants
+    // to the room and ask the room to construct it
+
+    // our state doesn't need to change
+    return StateAndAction(my_state, new_session_action);
+}
+
+/**
+ For the current user, calls it when receive JOIN_REQUEST with
+
+ (U_joiner, y_joiner)
+       
+ But while the current session doesn't have the future crypto
+
+ - start a new new participant list which does
+
+ - computes session_id
+ - new session does:
+ - set new session status to STALE
+ - doesn't send any thing
+*/
+Session::StateAndAction  Session::init_a_stale_session_with_new_user(Message received_message)
+{
+    RoomAction new_session_action;
+
+    logger.assert_or_die(received_message.message_type == Message::JOIN_REQUEST,
+                         "wrong message type is provided to the accetpor " + myself.nickname +
+                             " to establish a session. Message type " + std::to_string(Message::JOIN_REQUEST) +
+                             " was expected but type " + std::to_string(received_message.message_type) +
+                             " was provided.");
+
+    UnauthenticatedParticipant joiner(received_message.joiner_info);
+    // each id can only join once but it might be zombied out so we need
+    // account for that
+    // inform everybody about your transcript chain
+    //send("", Message::JUST_ACK);
+
+    ParticipantMap live_participants = participants;
+    if (live_participants.find(joiner.participant_id.nickname) == live_participants.end()) {
+        logger.info("creating a session with new participant " + joiner.participant_id.nickname);
+        live_participants.insert(
+            std::pair<std::string, Participant>(joiner.participant_id.nickname, Participant(joiner)));
+
+        Session* new_child_session = new Session(
+            STALER, us, room_name, &cryptic, live_participants, participants, &received_message);
+
+        // if it fails it throw exception catched by the room
+        new_session_action.action_type = RoomAction::NEW_SESSION;
+        new_session_action.bred_session = new_child_session;
+
+        // This broadcast not happens in session constructor because sometime we want just to make
+        // a session object and not tell the whole world about it.
+    } else {
+        logger.warn(joiner.participant_id.nickname + " can't join the room twice");
         //we need to re-broadcast the participant info message in case
         //they missed it
         throw DoubleJoinException();
@@ -750,11 +836,12 @@ Session::StateAndAction Session::init_a_session_with_new_user(Message received_m
 
 
  */
-RoomAction Session::init_a_session_with_plist(Message received_message)
+Session::StateAndAction Session::init_a_session_with_plist(Message received_message)
 {
-
     RoomAction new_session_action;
 
+    logger.info("constructing a session off participant list. I must have missed the join request", __FUNCTION__, myself.nickname);
+    
     logger.assert_or_die(received_message.message_type == Message::PARTICIPANTS_INFO,
                          "wrong message type is provided to the accetpor " + myself.nickname +
                              " to establish a session. Message type " +
@@ -772,7 +859,7 @@ RoomAction Session::init_a_session_with_plist(Message received_message)
 
     if (!received_message.verify_message(temp_future_pub_key)) {
         release_crypto_resource(temp_future_pub_key);
-        logger.warn("failed to verify signature of PARTICIPANT_INFO message.");
+        logger.warn("failed to verify signature of PARTICIPANT_INFO message from " + received_message.sender_nick, __FUNCTION__, myself.nickname);
         throw AuthenticationException();
     }
 
@@ -793,6 +880,7 @@ RoomAction Session::init_a_session_with_plist(Message received_message)
                 !compare_hash(participants[cur_participant.second.id.nickname].future_raw_ephemeral_key,
                                        cur_participant.second.raw_ephemeral_key);
         } else {
+          logger.warn("participant " + cur_participant.second.id.nickname + " changed future ephemeral key, need to be re-authenticate");
             cur_participant.second.authenticated = false;
         }
     }
@@ -805,7 +893,8 @@ RoomAction Session::init_a_session_with_plist(Message received_message)
     new_session_action.bred_session = new_child_session;
 
     // our state doesn't need to change
-    return new_session_action;
+    return StateAndAction(my_state, new_session_action);
+
 }
 
 /**
@@ -912,6 +1001,9 @@ Session::StateAndAction Session::send_session_confirmation_if_everybody_is_contr
         compute_session_confirmation();
         // we need our future ephemeral key to attach to the message
         future_cryptic.init();
+        future_cryptic_gaurd = true;
+        //future_cryptic = cryptic;
+        
         // now send the confirmation messagbe
         Message outboundmessage(&cryptic);
 
@@ -955,8 +1047,15 @@ Session::StateAndAction Session::mark_confirmed_and_may_move_session(Message rec
     // doesn't match we shouldn't have reached this point
     if (!validate_session_confirmation(received_message)) {
         logger.warn(received_message.sender_nick +
-                        "failed to provid a valid session confirmation. confirmation ignored.",
+                        " failed to provide a valid session confirmation. confirmation ignored.",
                     __FUNCTION__, myself.nickname);
+        logger.warn("session fingerprint: " + session_view_fingerprint(), __FUNCTION__, myself.nickname);
+
+        char buf[sizeof(unsigned short int) + 1];
+        std::sprintf(buf, "%04x",*(reinterpret_cast<unsigned short int*>(cryptic.get_ephemeral_pub_key()))%0x10000);
+        logger.warn(std::string("our current ephemeral public key is: ") + buf, __FUNCTION__, myself.nickname);
+
+        logger.abort(session_view_fingerprint(), __FUNCTION__, myself.nickname);
         return StateAndAction(my_state, c_no_room_action);
     }
 

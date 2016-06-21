@@ -125,13 +125,14 @@ void Participant::compute_p2p_private(AsymmetricKey thread_user_id_key, Cryptic*
 
 /**
  *  this is basically the merge function
+ * Assuming you want to preserve the elements in mapA, and merge elements in mapB for which there is no key in mapA
  */
 ParticipantMap operator+(const ParticipantMap& lhs, const ParticipantMap& rhs)
 {
-    ParticipantMap result(lhs);
+  ParticipantMap result(lhs);
 
-    result.insert(rhs.begin(), rhs.end());
-    return result;
+  result.insert(rhs.begin(), rhs.end());
+  return result;
 }
 
 /**

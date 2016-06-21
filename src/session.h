@@ -143,6 +143,7 @@ class Session
 
     Cryptic cryptic;
     Cryptic future_cryptic;
+    bool future_cryptic_gaurd = false;
     HashBlock hashed_id;
 
     // TODO: To keep track of why the session is created and if it is
@@ -419,7 +420,11 @@ class Session
         // we trust ourselves so no need to auth ourselves neither be_authed_to
         participants[peers[my_index]].authenticated = true;
         participants[peers[my_index]].authed_to = true;
-
+        
+        // if the ephemeral crypto of the session is consistant with
+        //what we are going to broad cast
+        std::string temp_str = public_key_to_stringbuff(cryptic.get_ephemeral_pub_key());
+        logger.assert_or_die(!compare_hash(participants[peers[my_index]].raw_ephemeral_key, strbuff_to_hash(temp_str)) , "we appear in the plist with a wrong public key", __FUNCTION__, myself.nickname);
         for (size_t i = 0; i < peers.size(); i++) {
             // participants[peers[i]].thread_user_as_participant = &participants[peers[my_index]];
             // if we copy the session the pointer
@@ -568,7 +573,7 @@ class Session
      * When a session request the creation of a session it inform
      * the sessoin of the condition it has been created
      */
-    enum SessionConceiverCondition { CREATOR, JOINER, ACCEPTOR, PEER, STAYER };
+    enum SessionConceiverCondition { CREATOR, JOINER, ACCEPTOR, PEER, STAYER, STALER };
 
   protected:
     // should only be changed in constructor or state transitor
@@ -675,6 +680,23 @@ class Session
     StateAndAction init_a_session_with_new_user(Message received_message);
 
     /**
+       For the current user, calls it when receive JOIN_REQUEST with
+
+       (U_joiner, y_joiner)
+       
+       But while the current session doesn't have the future crypto
+
+       - start a new new participant list which does
+
+       - computes session_id
+       - new session does:
+       - set new session status to STALE
+       - doesn't send any thing
+
+     */
+    StateAndAction init_a_stale_session_with_new_user(Message received_message);
+
+    /**
        For the current user, calls it when receive PARTICIPANT_INFO which
        doesn't exists in its universe, this only happens when they are the
        joining participant in previous itteration
@@ -690,7 +712,7 @@ class Session
 
 
    */
-    RoomAction init_a_session_with_plist(Message received_message);
+    StateAndAction init_a_session_with_plist(Message received_message);
 
     /**
        For the current user, calls it when receive JOINER_AUTH
@@ -812,10 +834,17 @@ class Session
         /* np1secFSMGraphTransitionMatrix[JOIN_REQUESTED][Message::SESSION_CONFIRMATION] = */
         /*     &Session::confirm_or_resession; */
 
-        // user currently in the session: current session
-        np1secFSMGraphTransitionMatrix[IN_SESSION][Message::JOIN_REQUEST] =
-            &Session::init_a_session_with_new_user;
-
+        // we can't start a real new session in following state cause we 
+        // don't have future ephemeral keys set for these sessions.
+        // Instead we start a stale session as a place holder for the list
+        // of participants
+        
+        np1secFSMGraphTransitionMatrix[RE_SHARED][Message::JOIN_REQUEST] =
+             &Session::init_a_stale_session_with_new_user;
+        
+        np1secFSMGraphTransitionMatrix[GROUP_KEY_GENERATED][Message::JOIN_REQUEST] =
+             &Session::init_a_stale_session_with_new_user;
+        
         // new session for currently in previous session
         // JOINER_AUTH and PARTICIPANT_INFO are essentially the same beside the
         // After leave or in session forward secrecy
@@ -832,9 +861,20 @@ class Session
         np1secFSMGraphTransitionMatrix[GROUP_KEY_GENERATED][Message::SESSION_CONFIRMATION] =
             &Session::mark_confirmed_and_may_move_session;
 
+        // user currently in the session: current session
+
         // If it is in session and it is an in session message, then need to receive it
         // by the session first
         np1secFSMGraphTransitionMatrix[IN_SESSION][Message::IN_SESSION_MESSAGE] = &Session::receive;
+
+        //A new join request coming
+        np1secFSMGraphTransitionMatrix[IN_SESSION][Message::JOIN_REQUEST] =
+            &Session::init_a_session_with_new_user;
+
+        //In case we are new joiner and we missed the join request but other didn't
+        np1secFSMGraphTransitionMatrix[IN_SESSION][Message::PARTICIPANTS_INFO] =
+          &Session::init_a_session_with_plist;
+
 
         // DEAD session should be allowed to decrypt a message is aimed at though it shouldn't take any action based on
         // it
@@ -880,6 +920,30 @@ class Session
      * access function for state
      */
     SessionState get_state() { return my_state; }
+
+    /**
+     * return a string buffer consitings participant name
+     * and session finger print for logging purpose
+     */
+    std::string session_view_fingerprint()
+    {
+      char buf[sizeof(unsigned short int) + 1];
+      std::sprintf(buf, "%04x",*(reinterpret_cast<unsigned short int*>(session_id.get()))%0x10000);
+      std::string session_fingerprint(buf);
+      session_fingerprint += ":";
+      session_fingerprint += logger.state_to_text[my_state];
+      session_fingerprint += ":";
+      UnauthenticatedParticipantList session_view_list = session_view();
+      for (UnauthenticatedParticipantList::iterator it = session_view_list.begin(); it != session_view_list.end(); ++it) {
+        session_fingerprint += (*it).participant_id.nickname;
+        std::sprintf(buf, "%04x",*(reinterpret_cast<unsigned short int*>((*it).ephemeral_pub_key))%0x10000);
+        session_fingerprint += buf;
+        session_fingerprint += (*it).authenticated ? "+" : "-";
+      }
+
+      return session_fingerprint;
+      
+    }
 
     /**
      * tells if rejoin is active
@@ -1065,7 +1129,7 @@ class Session
     friend void cb_rejoin(void* arg);
     friend void cb_re_session(void* arg);
 
-    friend Room;
+    friend Room; //why?
 };
 
 } // namespace np1sec

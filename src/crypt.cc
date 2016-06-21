@@ -168,7 +168,7 @@ std::string hash_to_string_buff(const HashBlock hash_block)
  * cast the string hash to unit8_t* dies if the size isn't correct
  * the buffer is only valid as long as the HashStdBlock is valid
  */
-const uint8_t* strbuff_to_hash(std::string& hash_block_buffer)
+const uint8_t* strbuff_to_hash(const std::string& hash_block_buffer)
 {
     logger.assert_or_die(hash_block_buffer.size() == sizeof(HashBlock), "Hash block doesn't have std size");
     return reinterpret_cast<const uint8_t*>(hash_block_buffer.c_str());
@@ -315,7 +315,7 @@ gcry_sexp_t copy_crypto_resource(gcry_sexp_t crypto_resource)
     gcry_sexp_t copied_resource;
     gcry_error_t err = gcry_sexp_build(&copied_resource, NULL, "%S", crypto_resource);
     if (err) {
-        logger.error(std::string("failed to copy crypto resource: ") + gcry_strsource(err) + "/" + gcry_strerror(err),
+        logger.abort(std::string("failed to copy crypto resource: ") + gcry_strsource(err) + "/" + gcry_strerror(err),
                      __FUNCTION__);
         throw CryptoException();
         return nullptr;
@@ -657,6 +657,11 @@ Cryptic::~Cryptic()
     gcry_sexp_release(ephemeral_pub_key);
     gcry_sexp_release(ephemeral_prv_key);
     secure_wipe(session_key, c_hash_length);
+
+    ephemeral_key = nullptr;
+    ephemeral_pub_key = nullptr;
+    ephemeral_prv_key = nullptr;
+    
     logger.debug("Wiped session_key from Cryptic instance");
 }
 

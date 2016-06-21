@@ -224,20 +224,30 @@ void Room::receive_handler(Message received_message)
                         Session* new_session =
                             new Session(Session::JOINER, user_state, name, &np1sec_ephemeral_crypto,
                                               ParticipantMap(), ParticipantMap(), &received_message);
-                        if (new_session->get_state() != Session::DEAD) {
+                        //check if the message isn't tampered
+                        if ((received_message.session_id == new_session->my_session_id())) {
+                          if (new_session->get_state() != Session::DEAD) {
                             // we need to get rid of old session if it is dead
                             // till we get a reviving mechanisim
-                            if (message_session != session_universe.end() &&
-                                (message_session->second->get_state() == Session::DEAD)) {
-                                delete message_session->second;
-                                session_universe.erase(message_session->first);
+                            if (message_session != session_universe.end() /*&&
+                                                                            (message_session->second->get_state() == Session::DEAD)*/) {
+                              //if current session wasn't dead we would have delegate the
+                              //the message to it.
+                              delete message_session->second;
+                              session_universe.erase(message_session->first);
                             }
                             session_universe.insert(std::pair<std::string, Session*>(
-                                received_message.session_id.get_as_stringbuff(), new_session));
+                                                                                     new_session->my_session_id().get_as_stringbuff(), new_session));
+                          }
+                        } else {
+                          logger.warn("Computed session id doesn't match what the message claims, tampered or invalid message?");
+                          delete new_session;
                         }
                     } catch (std::exception& e) {
-                        logger.warn(e.what(), __FUNCTION__, user_state->myself->nickname);
-                    }
+                          logger.debug(e.what(), __FUNCTION__, user_state->myself->nickname);
+                        }
+                    
+                
                 } else if (received_message.message_type == Message::SESSION_CONFIRMATION) {
                     // this is bad news we haven't been confirmed and we received a
                     // confirmation for another sid. so it means another session is being
@@ -249,12 +259,12 @@ void Room::receive_handler(Message received_message)
                             cur_session.second->nobody_confirmed()) {
                             logger.debug("somebody else is confirming session, need to rejoin", __FUNCTION__,
                                          user_state->myself->nickname);
-                            //cur_session.second->commit_suicide(); // we know the action is either death or nothing in
+                            cur_session.second->commit_suicide(); // we know the action is either death or nothing in
                                                                   // both case we don't need to do anything
                         }
 
                     logger.debug("somebody joined/left, before we can join, starting from the beginning", __FUNCTION__);
-                    try_rejoin(); // it helps because although the active session
+                    //try_rejoin(); // it helps because although the active session
 
                 } // otherwise that message doesn't concern us (the entrance for setting up session id is
                 // PARTICIPANTS_INFO
@@ -272,13 +282,15 @@ void Room::receive_handler(Message received_message)
             if (session_universe.find(hash_to_string_buff(received_message.session_id.get())) !=
                 session_universe.end()) {
                 try {
+                  logger.assert_or_die(session_universe[received_message.session_id.get_as_stringbuff()]->my_session_id().get_as_stringbuff() == received_message.session_id.get_as_stringbuff(), "session is inserted in a wrong spot");
                     action_to_take = session_universe[received_message.session_id.get_as_stringbuff()]->state_handler(
                         received_message);
                 } catch (std::exception& e) {
                     logger.error(e.what(), __FUNCTION__, user_state->myself->nickname);
                 }
             } else if (received_message.message_type ==
-                           Message::PARTICIPANTS_INFO && // only participant info can ignate new session (in case
+                           Message::PARTICIPANTS_INFO && //at this point this is a participant info message for which we don't have a session.
+                       // only participant info can ignate new session (in case
                                                                // we just joined and we missed the another user join
                                                                // request)
                        session_universe[active_session.get_as_stringbuff()]->get_state() !=
@@ -288,8 +300,7 @@ void Room::receive_handler(Message received_message)
                 // joining, if we are part of it then we should make a session for it
                 try {
                     action_to_take =
-                        session_universe[next_in_activation_line.get_as_stringbuff()]->init_a_session_with_plist(
-                            received_message);
+                      session_universe[next_in_activation_line.get_as_stringbuff()]->state_handler(received_message);
                 } catch (std::exception& e) {
                     logger.error(e.what(), __FUNCTION__, user_state->myself->nickname);
                 }
@@ -327,26 +338,30 @@ void Room::receive_handler(Message received_message)
                 RoomAction::NEW_PRIORITY_SESSION) { // TODO:: we need to delete a dead session probably
           auto premature_session = session_universe.find(action_to_take.bred_session->my_session_id().get_as_stringbuff());
           if (premature_session != session_universe.end()) {
-            switch (premature_session->second->get_state())
-              {
-              case Session::RE_SHARED:
-                //just go with current session just resend the participant info message
-                delete action_to_take.bred_session;
-                action_to_take.bred_session = premature_session->second;
-                logger.debug("a room already in state of: " + logger.state_to_text[premature_session->second->get_state()] + " exists.");
-                break;
-                
-              case Session::DEAD:
-                delete premature_session->second; //We are replacinig it with new session
-                session_universe.erase(premature_session);
-                break;
-
-              default:
                 logger.debug("a room already in state of: " + logger.state_to_text[premature_session->second->get_state()] + " exists. killing it in favor of newly generated session");
                 premature_session->second->commit_suicide();
                 delete premature_session->second; //We are replacinig it with new session
                 session_universe.erase(premature_session);
-              }
+            // switch (premature_session->second->get_state())
+            //   {
+            //   case Session::RE_SHARED:
+            //     //just go with current session just resend the participant info message
+            //     delete action_to_take.bred_session;
+            //     action_to_take.bred_session = premature_session->second;
+            //     logger.debug("a room already in state of: " + logger.state_to_text[premature_session->second->get_state()] + " exists.");
+            //     break;
+                
+            //   case Session::DEAD:
+            //     delete premature_session->second; //We are replacinig it with new session
+            //     session_universe.erase(premature_session);
+            //     break;
+
+            //   default:
+            //     logger.debug("a room already in state of: " + logger.state_to_text[premature_session->second->get_state()] + " exists. killing it in favor of newly generated session");
+            //     premature_session->second->commit_suicide();
+            //     delete premature_session->second; //We are replacinig it with new session
+            //     session_universe.erase(premature_session);
+            //   }
             
           }
           session_universe.insert(std::pair<std::string, Session*>(
@@ -489,8 +504,8 @@ void Room::refresh_stale_in_limbo_sessions(SessionId new_parent_session_id)
     logger.assert_or_die(new_parent_session != session_universe.end(),
                          "new parental session doesn't exists in the session universe", __FUNCTION__,
                          user_state->myself->nickname);
-    logger.assert_or_die(new_parent_session->second->get_state() != Session::DEAD,
-                         "can't breed out of a dead parent", __FUNCTION__, user_state->myself->nickname);
+    logger.assert_or_die(new_parent_session->second->get_state() == Session::IN_SESSION,
+                         "can't breed out of a dead or unconfirmed parent", __FUNCTION__, user_state->myself->nickname);
 
     SessionMap refreshed_sessions;
     for (SessionMap::iterator session_it = session_universe.begin(); session_it != session_universe.end();
@@ -511,11 +526,13 @@ void Room::refresh_stale_in_limbo_sessions(SessionId new_parent_session_id)
 
         // update: in favor of simplicity we are having a nonbroadcasting creation
         // so we can create and kill sessions with not so much problem
-        if ((session_it->second->get_state() != Session::DEAD) &&
+        /*if ((session_it->second->get_state() != Session::DEAD) &&
             (session_it->second->get_state() != Session::IN_SESSION) &&
             (session_it->second->session_id.get_as_stringbuff() !=
              new_parent_session_id
-                 .get_as_stringbuff())) { // basically only the stale sessions, we can make that explicit
+             .get_as_stringbuff()))*/
+      if (session_it->second->get_state() == Session::STALE)
+      { // basically only the stale sessions, we can make that explicit
             logger.debug("refreshing " + logger.state_to_text[session_it->second->get_state()] + " session with: " +
                              participants_to_string(session_it->second->participants) + " as new active session has: " +
                              participants_to_string(new_parent_session->second->future_participants()),
@@ -524,7 +541,7 @@ void Room::refresh_stale_in_limbo_sessions(SessionId new_parent_session_id)
             session_it->second->commit_suicide();
             // Session *born_session = nullptr;
             ParticipantMap new_participant_list =
-                session_it->second->delta_plist() + new_parent_session->second->future_participants();
+              new_parent_session->second->future_participants() + session_it->second->delta_plist();
 
             logger.debug("creating new session in limbo with participants: " +
                              participants_to_string(new_participant_list),
@@ -533,30 +550,58 @@ void Room::refresh_stale_in_limbo_sessions(SessionId new_parent_session_id)
             // check if the session already exists
             SessionId to_be_born_session_id(new_participant_list);
 
-            // if (session_universe.find(to_be_born_session_id.get_as_stringbuff()) == session_universe.end()) {
-            try {
+            //that's really might happen because of two join requests, one during stale process
+            //and one after.
+            auto refreshee = session_universe.find(to_be_born_session_id.get_as_stringbuff());
+            if (refreshee == session_universe.end()  //such session doesn't exists or
+                || refreshee->second->get_state() != Session::RE_SHARED) { //it is not in re shared state. It might have been made out of another stale session
+              //is possible, because we only get the new participant out of old sessions.
+              //so two different stale sessions can collapse into one theoretically.
+              //but because the crypto doesn't change between each staling/refreslhing
+              //that won't happen probably.
+            
+              try {
+
                 // XXX/redwire
                 // This is an awfully fishy use of `new`!!!
-                refreshed_sessions.insert(std::pair<std::string, Session*>(
-                    to_be_born_session_id.get_as_stringbuff(),
-                    new Session(Session::ACCEPTOR, user_state, name,
-                                      &new_parent_session->second->future_cryptic, new_participant_list,
-                                      new_parent_session->second->future_participants())));
-            } catch (std::exception& e) {
+                //First make sure that no such a session exists
+                Session* new_fresh_session = new Session(Session::ACCEPTOR, user_state, name,
+                                                         &new_parent_session->second->future_cryptic, new_participant_list,
+                                                         new_parent_session->second->future_participants());
+                if (refreshee != session_universe.end()) {
+                  delete refreshee->second; //a better idea might be to check if the session is
+                  //in re_shared and let it be 
+                  refreshee->second = new_fresh_session;
+                } else {
+                  refreshed_sessions.insert(std::pair<std::string, Session*>(
+                                                                             to_be_born_session_id.get_as_stringbuff(), new_fresh_session));
+                }
+                                          
+              } catch (std::exception& e) {
                 logger.error(e.what());
+              }
+              
             }
+            
             session_it++;
 
-            //}
-        } else if (session_it->second->get_state() == Session::DEAD) { // anything that was dead before
+      } else if (session_it->second->get_state() == Session::DEAD) { // anything that was dead before
             SessionMap::iterator to_erase =
                 session_it; // TODO: is it the best way? we still not sure what to do with dead session
             session_it++;
             delete to_erase->second;
             session_universe.erase(to_erase);
-        } else {
-            session_it++;
-        }
+      } else {
+        //This might be a session we just created during the refresh process
+        //I'm not sure if the iterator is going iterate ove these
+            // if ((session_it->second->get_state() != Session::IN_SESSION) &&
+            //   (session_it->second->session_id.get_as_stringbuff() !=
+            //    new_parent_session_id.get_as_stringbuff()))
+            //   {
+                // logger.warn("session should be stale but is " + logger.state_to_text[session_it->second->get_state()], __FUNCTION__, user_state->myself->nickname);
+      //  }
+        session_it++;
+      }
     }
 
     // now merge the refreshed sessions
